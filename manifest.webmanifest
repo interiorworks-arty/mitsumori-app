@@ -1,16 +1,1 @@
-{
-  "name": "見積",
-  "short_name": "見積",
-  "start_url": "./",
-  "display": "standalone",
-  "background_color": "#F4F1ED",
-  "theme_color": "#B7AA9F",
-  "icons": [
-    {
-      "src": "./icon.png?v=0110",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
-  ]
-}
+{"name":"見積","short_name":"見積","start_url":"./","display":"standalone","background_color":"#F4F1ED","theme_color":"#B7AA9F","icons":[{"src":"./icon.png?v=0111","sizes":"512x512","type":"image/png","purpose":"any maskable"}]}
