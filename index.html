@@ -760,7 +760,12 @@ sec.items.forEach((it,ii)=>{let k=key(si,ii),q=s.qty[k];if(C().hidden[k])return;
 (s.userMaster[si]||[]).forEach((it,ui)=>{let k=ukey(si,it.id),q=s.qty[k];if(C().hidden[k])return;if(q!==undefined&&q!==''&&Number(q)!==0){let p=priceByKey(k,Number(it.price)||0),a=(Number(q)||0)*p;rows.push({id:'u:'+si+':'+it.id,base:1000+ui,n:it.name,spec:it.spec||'',p,q,u:it.unit||'',a});st+=a}});
 (s.custom[si]||[]).forEach((it,ci)=>{if(it.type==='note'&&(it.text||'').trim())notes.push(it.text.trim());if(it.type==='item'&&it.qty!==undefined&&it.qty!==''&&Number(it.qty)!==0){let a=(Number(it.qty)||0)*(Number(it.price)||0);rows.push({id:'c:'+si+':'+ci,base:2000+ci,n:it.name||'任意項目',spec:it.spec||'',p:Number(it.price)||0,q:it.qty,u:it.unit||'',a});st+=a}});
 rows=orderRows(si,rows);if(rows.length||notes.length){any=true;sum+=st;body+=`<section class="psec" data-preview-si="${si}"><div class="ph"><span class="previewSecDrag" data-si="${si}">≡</span>${esc(secName(si))}</div>`;if(rows.length){body+='<table><thead><tr><th>品名</th><th>数量</th><th>単位</th><th>単価</th><th>金額</th></tr></thead><tbody>';rows.forEach(r=>body+=`<tr data-pid="${esc(r.id)}" data-si="${si}"><td><span class="previewDrag" data-id="${esc(r.id)}" data-si="${si}">≡</span><span class="itemTwo"><span class="itemMain">${esc(r.n)}</span><span class="itemSpec">${esc(r.spec||'')}</span></span></td><td>${esc(r.q)}</td><td>${esc(r.u)}</td><td>${yen(r.p)}</td><td>${yen(r.a)}</td></tr>`);body+=`</tbody></table><div class="sub">${esc(sec.name)} 小計　${yen(st)}</div>`}notes.forEach(n=>body+=`<div style="padding:4px 7px">※ ${esc(n)}</div>`);body+='</section>'}});
-let tax=Math.round(sum*.1),grand=sum+tax,co=s.company,cp=companyParts(co),stampV=co.stampView||{x:84,y:13,w:10},logoV=co.logoView||{x:76,y:13,w:11};paper.innerHTML=`<div class="pDate">${esc(fmtDate(s.meta.date||''))}</div><h1>${esc(s.meta.title||'御見積書')}</h1><div class="pTop"><div class="clientInfo"><div class="clientLine">${esc(s.meta.customer||'')}${s.meta.honorific?'　'+esc(s.meta.honorific):''}</div></div><div class="company"><div class="coAddressBlock"><strong>${esc(co.name||'')}</strong>${co.person?`<div class="coLine coPerson">${esc(co.person)}</div>`:''}${cp.postal?`<div class="coLine coPostal">${esc(cp.postal)}</div>`:''}${cp.addr?`<div class="coLine coAddress">${esc(cp.addr)}</div>`:''}${cp.tel?`<div class="coLine coTel">TEL ${esc(cp.tel)}</div>`:''}${cp.fax?`<div class="coLine coFax">FAX ${esc(cp.fax)}</div>`:''}${cp.mail?`<div class="coLine coMail">Mail ${esc(cp.mail)}</div>`:''}${co.reg?`<div class="coLine coReg">登録番号：${esc(co.reg)}</div>`:''}</div></div></div><div class="assetLayer">${co.logo?`<img class="companyAsset logoAsset" data-kind="logo" src="${co.logo}" style="${assetStyle(logoV)};--logo-opacity:${(Number(co.logoOpacity)||42)/100}">`:''}${co.stamp?`<img class="companyAsset stampAsset" data-kind="stamp" src="${co.stamp}" style="${assetStyle(stampV)}">`:''}<span class="assetResize"></span></div>${s.meta.project?`<div class="projectLine"><span class="projectLabel">件名</span>${esc(s.meta.project)}</div>`:''}<div class="estimateTotal"><span class="label">御見積金額（税込）</span><span class="value">￥${Math.round(grand).toLocaleString('ja-JP')}</span></div>${any?body:'<div class="empty">数量を入力した項目だけ、ここに表示されます。</div>'}<div class="tot"><div><span>小計</span><b>${yen(sum)}</b></div><div><span>消費税（10%）</span><b>${yen(tax)}</b></div><div class="grand"><span>合計金額</span><b>${yen(grand)}</b></div></div>${s.meta.notes?`<div style="margin-top:14px;border-top:1px solid #aaa;padding-top:8px"><b>備考</b><br>${esc(s.meta.notes)}</div>`:''}`;bindPreviewDrag();bindPreviewSectionDrag();bindCompanyAssets();bindAssetResize();
+let tax=Math.round(sum*.1),grand=sum+tax,co=s.company,cp=companyParts(co),stampV=co.stampView||{x:84,y:13,w:10},logoV=co.logoView||{x:76,y:13,w:11};paper.innerHTML=`<div class="pDate">${esc(fmtDate(s.meta.date||''))}</div><h1>${esc(s.meta.title||'御見積書')}</h1><div class="pTop"><div class="clientInfo"><div class="clientLine">${esc(s.meta.customer||'')}${s.meta.honorific?'　'+esc(s.meta.honorific):''}</div></div><div class="company"><div class="coWide">
+<div class="coWideRow coWideAddress">${cp.postal?`<span>${esc(cp.postal)}</span>`:''}${cp.addr?`<span>${esc(cp.addr)}</span>`:''}</div>
+<div class="coWideRow coWideName"><strong>${esc(co.name||'')}</strong>${co.person?`<span class="coRepresentative">代表　　${esc(co.person)}</span>`:''}</div>
+<div class="coWideRow coWideContact">${cp.tel?`<span>TEL ${esc(cp.tel)}</span>`:''}${cp.fax?`<span>FAX ${esc(cp.fax)}</span>`:''}</div>
+${cp.mail?`<div class="coWideExtra">Mail ${esc(cp.mail)}</div>`:''}${co.reg?`<div class="coWideExtra">登録番号：${esc(co.reg)}</div>`:''}
+</div></div></div><div class="assetLayer">${co.stamp?`<img class="companyAsset stampAsset" data-kind="stamp" src="${co.stamp}" style="${assetStyle(stampV)}">`:''}<span class="assetResize"></span></div>${s.meta.project?`<div class="projectLine"><span class="projectLabel">件名</span>${esc(s.meta.project)}</div>`:''}<div class="estimateTotal"><span class="label">御見積金額（税込）</span><span class="value">￥${Math.round(grand).toLocaleString('ja-JP')}</span></div>${any?body:'<div class="empty">数量を入力した項目だけ、ここに表示されます。</div>'}<div class="tot"><div><span>小計</span><b>${yen(sum)}</b></div><div><span>消費税（10%）</span><b>${yen(tax)}</b></div><div class="grand"><span>合計金額</span><b>${yen(grand)}</b></div></div>${s.meta.notes?`<div style="margin-top:14px;border-top:1px solid #aaa;padding-top:8px"><b>備考</b><br>${esc(s.meta.notes)}</div>`:''}`;bindPreviewDrag();bindPreviewSectionDrag();bindCompanyAssets();bindAssetResize();
 requestAnimationFrame(()=>{fitPdfPreview();requestAnimationFrame(renderA4Guides)})}
 function pdfNewPage(stage){
   const page=document.createElement('div');
@@ -1283,4 +1288,36 @@ window.addEventListener('resize',()=>requestAnimationFrame(()=>{fitPdfPreview();
 .a4GuideLabel{right:10mm!important;top:-18px!important}
 .a4PageTag{right:10mm!important}
 .pdfPage .a4GuideLayer{display:none!important}
+</style>
+
+<style id="v0146-company-wide-3rows">
+/* 自社情報：ロゴなし・横長3段。中央段は「屋号　代表　氏名」をブロック中央へ */
+.pTop{grid-template-columns:minmax(0,38%) minmax(0,62%)!important;gap:12px!important}
+.company{padding-top:10px!important;text-align:initial!important;display:flex!important;justify-content:flex-end!important}
+.company .coWide{
+  width:100%!important;
+  max-width:118mm!important;
+  margin:0!important;
+  font-size:10.6px!important;
+  line-height:1.25!important;
+}
+.company .coWideRow{
+  display:flex!important;
+  align-items:baseline!important;
+  justify-content:center!important;
+  gap:12px!important;
+  white-space:nowrap!important;
+  text-align:center!important;
+}
+.company .coWideAddress{font-size:10.2px!important}
+.company .coWideName{font-size:12px!important;font-weight:900!important;margin:3px 0!important}
+.company .coWideName strong{font-size:12px!important;font-weight:900!important}
+.company .coRepresentative{font-weight:700!important}
+.company .coWideContact{font-size:10.2px!important;gap:18px!important}
+.company .coWideExtra{text-align:center!important;font-size:9.4px!important;margin-top:2px!important}
+.pdfPageInner .pTop{grid-template-columns:minmax(0,38%) minmax(0,62%)!important;gap:12px!important}
+.pdfPageInner .company{padding-top:10px!important}
+.pdfPageInner .company .coWide{font-size:10.6px!important;max-width:118mm!important}
+.pdfPageInner .company .coWideAddress,.pdfPageInner .company .coWideContact{font-size:10.2px!important}
+.pdfPageInner .company .coWideName,.pdfPageInner .company .coWideName strong{font-size:12px!important}
 </style>
