@@ -255,7 +255,7 @@ body{overscroll-behavior:none}
 }
 </style>
 
-</head><body><div id="pdfBusy">PDFを作成中…</div><div class="top"><div class="line"><div class="brand">ARTY WORKS <span style="font-size:10px;color:#9b8e83;font-weight:600">v0.1.157</span></div><div class="projectNow" id="projectNow">現場：—</div></div><div class="line tools"><button onclick="openProjects()">現場一覧</button><button onclick="newProject()">＋新規現場</button><select id="client"></select><button onclick="openClientManager()">取引先管理</button><button onclick="openRecipientManager()">宛名管理</button><button onclick="openCompany()">自社情報・印鑑</button><button onclick="showHidden()">非表示項目</button><button onclick="restoreBackup()" title="直前の保存データへ戻す">データ復元</button><button onclick="openFullBackup()" title="全データをファイルへ保存・復元">バックアップ</button><button class="primary" id="pdfBtn" onclick="exportPDF()">PDF出力</button></div></div>
+</head><body><div id="pdfBusy">PDFを作成中…</div><div class="top"><div class="line"><div class="brand">ARTY WORKS <span style="font-size:10px;color:#9b8e83;font-weight:600">v0.1.158</span></div><div class="projectNow" id="projectNow">現場：—</div></div><div class="line tools"><button onclick="openProjects()">現場一覧</button><button onclick="newProject()">＋新規現場</button><select id="client"></select><button onclick="openClientManager()">取引先管理</button><button onclick="openRecipientManager()">宛名管理</button><button onclick="openCompany()">自社情報・印鑑</button><button onclick="showHidden()">非表示項目</button><button onclick="restoreBackup()" title="直前の保存データへ戻す">データ復元</button><button onclick="openFullBackup()" title="全データをファイルへ保存・復元">バックアップ</button><button class="primary" id="pdfBtn" onclick="exportPDF()">PDF出力</button></div></div>
 <div class="layout">
 <div class="card previewCard"><div class="head previewHeadV131"><span>出力プレビュー <span class="small">1ページ目のみ配置調整可・2ページ目以降はPDF固定表示</span></span><div class="coverHeadActions"><button type="button" id="coverDefaultBtn" onclick="saveCoverLayoutAsDefault()">この配置をデフォルト保存</button><button type="button" id="coverLayoutLockBtn" onclick="toggleCoverLayoutLock()">配置固定</button></div></div><div class="preview"><div class="paper previewCoverOnly" id="paper"></div><div id="detailPreviewPages" class="detailPreviewPages"></div></div></div>
 <div class="card inputCard"><div class="head">書類入力 <span class="small">基本は数量だけ入力・ここでの変更はこの書類だけ</span></div><div class="inputScroll"><div class="meta docMetaV128">
@@ -7647,5 +7647,99 @@ html.pdfBusyNow,html.pdfBusyNow body{overflow:hidden!important}
   };
 
   setTimeout(()=>{try{updateDocumentTypeUI()}catch(_){}},0);
+})();
+</script>
+
+<style id="v0158-doc-type-lock-project-badge">
+/* v0.1.158: 書類種別は作成後に変更しない。ラジオ選択を廃止し固定表示へ。 */
+.docTypeChooser{gap:8px!important;align-items:center!important}
+.docTypeChooser>label,
+.docTypeChooser>.docTypeChooserLabel,
+.docTypeChooser>#docType{display:none!important}
+.docTypeFixedWrap{display:flex;align-items:center;gap:8px;min-height:40px}
+.docTypeFixedCaption{font-size:11px;font-weight:800;color:var(--muted)}
+.docTypeFixedBadge{display:inline-flex;align-items:center;justify-content:center;min-width:92px;padding:8px 14px;border-radius:10px;font-size:15px;font-weight:900;border:1px solid #cfc4bb;background:#f4f0ec;color:#4f4741}
+.docTypeFixedBadge.invoice{background:#e7eef6;border-color:#aebed0;color:#334b66}
+.docTypeFixedBadge.request{background:#f3eee4;border-color:#ccbfa8;color:#66543b}
+.estimateToInvoiceBtn{margin-left:8px!important}
+
+/* 現場一覧は書類種別を大きく分かりやすく。 */
+.projectCard{position:relative!important;padding:12px 12px 12px 15px!important}
+.projectCard::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;border-radius:12px 0 0 12px;background:#9c9188}
+.projectCard.doc-invoice::before{background:#59789a}
+.projectCard.doc-request::before{background:#92754b}
+.projectCardMain{min-width:0}
+.projectDocHead{display:flex;align-items:center;gap:8px;min-width:0;margin-bottom:4px}
+.projectDocBadgeV158{display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;padding:5px 9px;border-radius:8px;background:#eee8e3;border:1px solid #cfc4bb;color:#5d544e;font-size:12px;font-weight:900;line-height:1}
+.projectCard.doc-invoice .projectDocBadgeV158{background:#e7eef6;border-color:#aebed0;color:#334b66}
+.projectCard.doc-request .projectDocBadgeV158{background:#f3eee4;border-color:#ccbfa8;color:#66543b}
+.projectCard .projectTitle{font-size:15px!important}
+.projectCard .projectMeta .projectDocBadge{display:none!important}
+@media(max-width:700px){.projectDocHead{align-items:flex-start;flex-wrap:wrap}.estimateToInvoiceBtn{margin-left:0!important}}
+</style>
+<script id="v0158-doc-type-lock-project-badge-js">
+(function(){
+  function labelForType(t){return t==='invoice'?'請求書':t==='request'?'依頼書':'見積書'}
+  function ensureFixedDocType(){
+    const chooser=document.querySelector('.docTypeChooser');
+    if(!chooser||!window.s||!s.meta)return;
+    let wrap=chooser.querySelector('.docTypeFixedWrap');
+    if(!wrap){
+      wrap=document.createElement('div');
+      wrap.className='docTypeFixedWrap';
+      wrap.innerHTML='<span class="docTypeFixedCaption">書類種別</span><span class="docTypeFixedBadge"></span>';
+      chooser.insertBefore(wrap,chooser.firstChild);
+    }
+    const type=s.meta.docType||'estimate';
+    const badge=wrap.querySelector('.docTypeFixedBadge');
+    badge.textContent=labelForType(type);
+    badge.className='docTypeFixedBadge '+(type==='invoice'?'invoice':type==='request'?'request':'estimate');
+    const b=document.getElementById('estimateToInvoiceBtn');
+    if(b)b.style.display=type==='estimate'?'inline-flex':'none';
+  }
+
+  const oldUpdate=window.updateDocumentTypeUI;
+  window.updateDocumentTypeUI=function(){
+    if(typeof oldUpdate==='function')oldUpdate();
+    ensureFixedDocType();
+  };
+
+  // 現場一覧のカードを、書類種別が一目で分かる表示へ整える。
+  const oldRenderProjects=window.renderProjectList;
+  window.renderProjectList=function(){
+    if(typeof oldRenderProjects==='function')oldRenderProjects();
+    document.querySelectorAll('.projectCard').forEach(card=>{
+      const open=card.querySelector('.open');
+      if(!open)return;
+      const m=(open.getAttribute('onclick')||'').match(/openProject\('([^']+)'\)/);
+      if(!m)return;
+      const pr=projects.find(p=>p.id===m[1]);
+      const meta=pr&&pr.data&&pr.data.meta||{};
+      const type=meta.docType||'estimate';
+      card.classList.remove('doc-estimate','doc-invoice','doc-request');
+      card.classList.add(type==='invoice'?'doc-invoice':type==='request'?'doc-request':'doc-estimate');
+      const title=card.querySelector('.projectTitle');
+      if(title&&!title.parentElement.classList.contains('projectDocHead')){
+        const main=title.parentElement;
+        main.classList.add('projectCardMain');
+        const head=document.createElement('div');
+        head.className='projectDocHead';
+        const badge=document.createElement('span');
+        badge.className='projectDocBadgeV158';
+        badge.textContent=labelForType(type);
+        main.insertBefore(head,title);
+        head.appendChild(badge);
+        head.appendChild(title);
+      }
+    });
+  };
+
+  const oldRender=window.render;
+  window.render=function(){
+    if(typeof oldRender==='function')oldRender();
+    ensureFixedDocType();
+  };
+
+  setTimeout(()=>{try{ensureFixedDocType()}catch(_){}},0);
 })();
 </script>
