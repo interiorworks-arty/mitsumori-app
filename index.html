@@ -255,7 +255,7 @@ body{overscroll-behavior:none}
 }
 </style>
 
-</head><body><div id="pdfBusy">PDFを作成中…</div><div class="top"><div class="line"><div class="brand">ARTY WORKS <span style="font-size:10px;color:#9b8e83;font-weight:600">v0.1.153</span></div><div class="projectNow" id="projectNow">現場：—</div></div><div class="line tools"><button onclick="openProjects()">現場一覧</button><button onclick="newProject()">＋新規現場</button><select id="client"></select><button onclick="openClientManager()">取引先管理</button><button onclick="openRecipientManager()">宛名管理</button><button onclick="openCompany()">自社情報・印鑑</button><button onclick="showHidden()">非表示項目</button><button onclick="restoreBackup()" title="直前の保存データへ戻す">データ復元</button><button class="primary" id="pdfBtn" onclick="exportPDF()">PDF出力</button></div></div>
+</head><body><div id="pdfBusy">PDFを作成中…</div><div class="top"><div class="line"><div class="brand">ARTY WORKS <span style="font-size:10px;color:#9b8e83;font-weight:600">v0.1.154</span></div><div class="projectNow" id="projectNow">現場：—</div></div><div class="line tools"><button onclick="openProjects()">現場一覧</button><button onclick="newProject()">＋新規現場</button><select id="client"></select><button onclick="openClientManager()">取引先管理</button><button onclick="openRecipientManager()">宛名管理</button><button onclick="openCompany()">自社情報・印鑑</button><button onclick="showHidden()">非表示項目</button><button onclick="restoreBackup()" title="直前の保存データへ戻す">データ復元</button><button onclick="openFullBackup()" title="全データをファイルへ保存・復元">バックアップ</button><button class="primary" id="pdfBtn" onclick="exportPDF()">PDF出力</button></div></div>
 <div class="layout">
 <div class="card previewCard"><div class="head previewHeadV131"><span>出力プレビュー <span class="small">1ページ目のみ配置調整可・2ページ目以降はPDF固定表示</span></span><div class="coverHeadActions"><button type="button" id="coverDefaultBtn" onclick="saveCoverLayoutAsDefault()">この配置をデフォルト保存</button><button type="button" id="coverLayoutLockBtn" onclick="toggleCoverLayoutLock()">配置固定</button></div></div><div class="preview"><div class="paper previewCoverOnly" id="paper"></div><div id="detailPreviewPages" class="detailPreviewPages"></div></div></div>
 <div class="card inputCard"><div class="head">書類入力 <span class="small">基本は数量だけ入力・ここでの変更はこの書類だけ</span></div><div class="inputScroll"><div class="meta docMetaV128">
@@ -7393,3 +7393,113 @@ html.pdfBusyNow,html.pdfBusyNow body{overflow:hidden!important}
 .finalNotesPresetBar button:first-of-type{background:#5f554d!important;color:#fff!important;border-color:#5f554d!important}
 @media(max-width:700px){.finalNotesPresetBar{grid-template-columns:1fr 1fr!important}.finalNotesPresetBar select{grid-column:1/-1!important}}
 </style>
+
+
+<style id="v0154-full-backup-style">
+#fullBackupModal .mc{width:min(560px,100%)}
+.backupHero154{padding:12px 13px;border:1px solid var(--line);border-radius:12px;background:#fbf8f5;margin:8px 0 12px;line-height:1.55}
+.backupActions154{display:grid;gap:10px}
+.backupAction154{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.backupAction154 b{display:block;margin-bottom:3px;color:var(--ink)}
+.backupAction154 .small{line-height:1.45}
+.backupAction154 button{border:1px solid var(--line);border-radius:9px;background:#fff;padding:9px 12px;font-weight:900;white-space:nowrap}
+.backupAction154 .primary154{background:var(--dark);border-color:var(--dark);color:#fff}
+.backupWarn154{margin-top:11px;padding:9px 10px;border-radius:10px;background:#fff4dc;color:#6b5420;font-size:11px;line-height:1.5}
+@media(max-width:620px){.backupAction154{grid-template-columns:1fr}.backupAction154 button{width:100%}}
+</style>
+
+<script id="v0154-full-backup-js">
+(function(){
+  const PREFIX='arty_est_';
+  const EMERGENCY_K='arty_est_emergency_before_restore_v0154';
+  function allEstimateStorage(){
+    const out={};
+    for(let i=0;i<localStorage.length;i++){
+      const k=localStorage.key(i);
+      if(k && k.startsWith(PREFIX) && k!==EMERGENCY_K) out[k]=localStorage.getItem(k);
+    }
+    return out;
+  }
+  function makeBackupObject(){
+    return {
+      format:'ARTY_WORKS_ESTIMATE_BACKUP',
+      formatVersion:1,
+      appVersion:'v0.1.154',
+      createdAt:new Date().toISOString(),
+      data:allEstimateStorage()
+    };
+  }
+  function timestampForFile(){
+    const d=new Date(),pad=n=>String(n).padStart(2,'0');
+    return d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'_'+pad(d.getHours())+pad(d.getMinutes());
+  }
+  function ensureModal(){
+    let m=document.getElementById('fullBackupModal'); if(m)return m;
+    m=document.createElement('div');m.className='modal';m.id='fullBackupModal';
+    m.innerHTML=`<div class="mc">
+      <h2 style="margin:0 0 4px">全データバックアップ</h2>
+      <div class="backupHero154">現場・見積内容・取引先設定・宛名・自社情報・単価・並び順・注意事項テンプレート・配置設定など、<b>この見積アプリの保存データをまとめて1ファイル</b>にします。</div>
+      <div class="backupActions154">
+        <div class="backupAction154"><div><b>バックアップを保存</b><div class="small">iPadの共有シートから「ファイルに保存」などを選べます。</div></div><button class="primary154" type="button" onclick="exportFullBackup154()">保存・共有</button></div>
+        <div class="backupAction154"><div><b>バックアップから復元</b><div class="small">保存した .json ファイルを選んで、アプリの全データを戻します。</div></div><button type="button" onclick="document.getElementById('fullBackupFile154').click()">ファイルを選択</button></div>
+        <div class="backupAction154"><div><b>復元前の状態に戻す</b><div class="small">バックアップ復元の直前に自動保存した状態へ1回戻せます。</div></div><button type="button" onclick="restoreEmergency154()">戻す</button></div>
+      </div>
+      <input id="fullBackupFile154" type="file" accept="application/json,.json" style="display:none">
+      <div class="backupWarn154">※ 復元は現在のデータをバックアップファイルの内容に置き換えます。復元直前の状態は自動的に退避します。</div>
+      <div class="ma"><button type="button" onclick="closeFullBackup()">閉じる</button></div>
+    </div>`;
+    document.body.appendChild(m);
+    m.addEventListener('pointerup',e=>{if(e.target===m)closeFullBackup()});
+    m.querySelector('#fullBackupFile154').addEventListener('change',async e=>{
+      const f=e.target.files&&e.target.files[0]; e.target.value=''; if(!f)return;
+      await importFullBackup154(f);
+    });
+    return m;
+  }
+  window.openFullBackup=function(){ensureModal().classList.add('on')};
+  window.closeFullBackup=function(){document.getElementById('fullBackupModal')?.classList.remove('on')};
+  window.exportFullBackup154=async function(){
+    try{
+      if(typeof save==='function')save();
+      const payload=makeBackupObject();
+      const txt=JSON.stringify(payload,null,2);
+      const name='v0.1.154_ARTYWORKS_バックアップ_'+timestampForFile()+'.json';
+      const blob=new Blob([txt],{type:'application/json'});
+      const file=new File([blob],name,{type:'application/json'});
+      if(navigator.share && (!navigator.canShare || navigator.canShare({files:[file]}))){
+        try{await navigator.share({files:[file]});return}catch(e){if(e&&e.name==='AbortError')return;}
+      }
+      const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);
+    }catch(e){console.error(e);alert('バックアップの作成に失敗しました。');}
+  };
+  function validateBackup154(obj){
+    if(!obj||obj.format!=='ARTY_WORKS_ESTIMATE_BACKUP'||!obj.data||typeof obj.data!=='object'||Array.isArray(obj.data))return false;
+    const ks=Object.keys(obj.data); if(!ks.length)return false;
+    return ks.every(k=>k.startsWith(PREFIX)&&typeof obj.data[k]==='string');
+  }
+  window.importFullBackup154=async function(file){
+    try{
+      const text=await file.text(); const obj=JSON.parse(text);
+      if(!validateBackup154(obj)){alert('この見積アプリのバックアップファイルではありません。');return;}
+      const count=Object.keys(obj.data).length;
+      const when=obj.createdAt?new Date(obj.createdAt).toLocaleString('ja-JP'):'日時不明';
+      if(!confirm(`バックアップを復元します。\n\n作成日時：${when}\n保存項目：${count}件\n\n現在のデータは復元前バックアップとして自動退避します。続けますか？`))return;
+      const current=allEstimateStorage();
+      localStorage.setItem(EMERGENCY_K,JSON.stringify({format:'ARTY_WORKS_ESTIMATE_EMERGENCY',createdAt:new Date().toISOString(),data:current}));
+      const remove=[]; for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith(PREFIX)&&k!==EMERGENCY_K)remove.push(k)}
+      remove.forEach(k=>localStorage.removeItem(k));
+      Object.entries(obj.data).forEach(([k,v])=>localStorage.setItem(k,v));
+      alert('バックアップを復元しました。アプリを再読み込みします。');location.reload();
+    }catch(e){console.error(e);alert('バックアップの読み込みに失敗しました。ファイルが壊れていないか確認してください。');}
+  };
+  window.restoreEmergency154=function(){
+    const raw=localStorage.getItem(EMERGENCY_K); if(!raw){alert('復元前の退避データはありません。');return;}
+    let obj; try{obj=JSON.parse(raw)}catch(_){alert('退避データを読み込めません。');return}
+    if(!obj||!obj.data||typeof obj.data!=='object'){alert('退避データを読み込めません。');return}
+    if(!confirm('直前のバックアップ復元を取り消して、復元前の状態へ戻しますか？'))return;
+    const remove=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith(PREFIX)&&k!==EMERGENCY_K)remove.push(k)}
+    remove.forEach(k=>localStorage.removeItem(k));Object.entries(obj.data).forEach(([k,v])=>{if(k.startsWith(PREFIX)&&typeof v==='string')localStorage.setItem(k,v)});
+    localStorage.removeItem(EMERGENCY_K);alert('復元前の状態へ戻しました。アプリを再読み込みします。');location.reload();
+  };
+})();
+</script>
