@@ -255,7 +255,7 @@ body{overscroll-behavior:none}
 }
 </style>
 
-</head><body><div id="pdfBusy">PDFを作成中…</div><div class="top"><div class="line"><div class="brand">ARTY WORKS <span style="font-size:10px;color:#9b8e83;font-weight:600">v0.1.154</span></div><div class="projectNow" id="projectNow">現場：—</div></div><div class="line tools"><button onclick="openProjects()">現場一覧</button><button onclick="newProject()">＋新規現場</button><select id="client"></select><button onclick="openClientManager()">取引先管理</button><button onclick="openRecipientManager()">宛名管理</button><button onclick="openCompany()">自社情報・印鑑</button><button onclick="showHidden()">非表示項目</button><button onclick="restoreBackup()" title="直前の保存データへ戻す">データ復元</button><button onclick="openFullBackup()" title="全データをファイルへ保存・復元">バックアップ</button><button class="primary" id="pdfBtn" onclick="exportPDF()">PDF出力</button></div></div>
+</head><body><div id="pdfBusy">PDFを作成中…</div><div class="top"><div class="line"><div class="brand">ARTY WORKS <span style="font-size:10px;color:#9b8e83;font-weight:600">v0.1.155</span></div><div class="projectNow" id="projectNow">現場：—</div></div><div class="line tools"><button onclick="openProjects()">現場一覧</button><button onclick="newProject()">＋新規現場</button><select id="client"></select><button onclick="openClientManager()">取引先管理</button><button onclick="openRecipientManager()">宛名管理</button><button onclick="openCompany()">自社情報・印鑑</button><button onclick="showHidden()">非表示項目</button><button onclick="restoreBackup()" title="直前の保存データへ戻す">データ復元</button><button onclick="openFullBackup()" title="全データをファイルへ保存・復元">バックアップ</button><button class="primary" id="pdfBtn" onclick="exportPDF()">PDF出力</button></div></div>
 <div class="layout">
 <div class="card previewCard"><div class="head previewHeadV131"><span>出力プレビュー <span class="small">1ページ目のみ配置調整可・2ページ目以降はPDF固定表示</span></span><div class="coverHeadActions"><button type="button" id="coverDefaultBtn" onclick="saveCoverLayoutAsDefault()">この配置をデフォルト保存</button><button type="button" id="coverLayoutLockBtn" onclick="toggleCoverLayoutLock()">配置固定</button></div></div><div class="preview"><div class="paper previewCoverOnly" id="paper"></div><div id="detailPreviewPages" class="detailPreviewPages"></div></div></div>
 <div class="card inputCard"><div class="head">書類入力 <span class="small">基本は数量だけ入力・ここでの変更はこの書類だけ</span></div><div class="inputScroll"><div class="meta docMetaV128">
@@ -650,6 +650,8 @@ function save(){
 }
 
 function flushStateNow(){
+  // v0.1.155: バックアップ復元直後の再読み込み時は、古いメモリ上の状態で復元データを上書きしない。
+  if(window.__artyRestoreInProgress)return;
   try{
     localStorage.setItem(K,JSON.stringify(s));
     syncProjectFromState();
@@ -7424,7 +7426,7 @@ html.pdfBusyNow,html.pdfBusyNow body{overflow:hidden!important}
     return {
       format:'ARTY_WORKS_ESTIMATE_BACKUP',
       formatVersion:1,
-      appVersion:'v0.1.154',
+      appVersion:'v0.1.155',
       createdAt:new Date().toISOString(),
       data:allEstimateStorage()
     };
@@ -7463,7 +7465,7 @@ html.pdfBusyNow,html.pdfBusyNow body{overflow:hidden!important}
       if(typeof save==='function')save();
       const payload=makeBackupObject();
       const txt=JSON.stringify(payload,null,2);
-      const name='v0.1.154_ARTYWORKS_バックアップ_'+timestampForFile()+'.json';
+      const name='v0.1.155_ARTYWORKS_バックアップ_'+timestampForFile()+'.json';
       const blob=new Blob([txt],{type:'application/json'});
       const file=new File([blob],name,{type:'application/json'});
       if(navigator.share && (!navigator.canShare || navigator.canShare({files:[file]}))){
@@ -7484,12 +7486,19 @@ html.pdfBusyNow,html.pdfBusyNow body{overflow:hidden!important}
       const count=Object.keys(obj.data).length;
       const when=obj.createdAt?new Date(obj.createdAt).toLocaleString('ja-JP'):'日時不明';
       if(!confirm(`バックアップを復元します。\n\n作成日時：${when}\n保存項目：${count}件\n\n現在のデータは復元前バックアップとして自動退避します。続けますか？`))return;
+      // ここから復元完了まで通常のpagehide/visibilitychange自動保存を止める。
+      // これをしないと、location.reload()直前に古い端末データが復元済みlocalStorageへ再保存される。
+      window.__artyRestoreInProgress=true;
       const current=allEstimateStorage();
       localStorage.setItem(EMERGENCY_K,JSON.stringify({format:'ARTY_WORKS_ESTIMATE_EMERGENCY',createdAt:new Date().toISOString(),data:current}));
       const remove=[]; for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith(PREFIX)&&k!==EMERGENCY_K)remove.push(k)}
       remove.forEach(k=>localStorage.removeItem(k));
       Object.entries(obj.data).forEach(([k,v])=>localStorage.setItem(k,v));
-      alert('バックアップを復元しました。アプリを再読み込みします。');location.reload();
+      // 書き戻し検証。1件でも一致しなければ再読み込みせず停止する。
+      const bad=Object.entries(obj.data).filter(([k,v])=>localStorage.getItem(k)!==v).map(([k])=>k);
+      if(bad.length){window.__artyRestoreInProgress=false;throw new Error('restore verification failed: '+bad.join(','));}
+      alert(`バックアップを復元しました。\n${Object.keys(obj.data).length}件の保存データを確認済みです。\nアプリを再読み込みします。`);
+      location.reload();
     }catch(e){console.error(e);alert('バックアップの読み込みに失敗しました。ファイルが壊れていないか確認してください。');}
   };
   window.restoreEmergency154=function(){
@@ -7497,8 +7506,11 @@ html.pdfBusyNow,html.pdfBusyNow body{overflow:hidden!important}
     let obj; try{obj=JSON.parse(raw)}catch(_){alert('退避データを読み込めません。');return}
     if(!obj||!obj.data||typeof obj.data!=='object'){alert('退避データを読み込めません。');return}
     if(!confirm('直前のバックアップ復元を取り消して、復元前の状態へ戻しますか？'))return;
+    window.__artyRestoreInProgress=true;
     const remove=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith(PREFIX)&&k!==EMERGENCY_K)remove.push(k)}
     remove.forEach(k=>localStorage.removeItem(k));Object.entries(obj.data).forEach(([k,v])=>{if(k.startsWith(PREFIX)&&typeof v==='string')localStorage.setItem(k,v)});
+    const bad=Object.entries(obj.data).filter(([k,v])=>k.startsWith(PREFIX)&&typeof v==='string'&&localStorage.getItem(k)!==v).map(([k])=>k);
+    if(bad.length){window.__artyRestoreInProgress=false;alert('復元前データの書き戻し確認に失敗しました。再読み込みは行いません。');return;}
     localStorage.removeItem(EMERGENCY_K);alert('復元前の状態へ戻しました。アプリを再読み込みします。');location.reload();
   };
 })();
