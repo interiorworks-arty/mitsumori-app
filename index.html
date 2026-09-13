@@ -255,7 +255,7 @@ body{overscroll-behavior:none}
 }
 </style>
 
-</head><body><div id="pdfBusy">PDFを作成中…</div><div class="top"><div class="line"><div class="brand">ARTY WORKS <span style="font-size:10px;color:#9b8e83;font-weight:600">v0.1.158</span></div><div class="projectNow" id="projectNow">現場：—</div></div><div class="line tools"><button onclick="openProjects()">現場一覧</button><button onclick="newProject()">＋新規現場</button><select id="client"></select><button onclick="openClientManager()">取引先管理</button><button onclick="openRecipientManager()">宛名管理</button><button onclick="openCompany()">自社情報・印鑑</button><button onclick="showHidden()">非表示項目</button><button onclick="restoreBackup()" title="直前の保存データへ戻す">データ復元</button><button onclick="openFullBackup()" title="全データをファイルへ保存・復元">バックアップ</button><button class="primary" id="pdfBtn" onclick="exportPDF()">PDF出力</button></div></div>
+</head><body><div id="pdfBusy">PDFを作成中…</div><div class="top"><div class="line"><div class="brand">ARTY WORKS <span style="font-size:10px;color:#9b8e83;font-weight:600">v0.1.159</span></div><div class="projectNow" id="projectNow">現場：—</div></div><div class="line tools"><button onclick="openProjects()">現場一覧</button><button onclick="newProject()">＋新規現場</button><select id="client"></select><button onclick="openClientManager()">取引先管理</button><button onclick="openRecipientManager()">宛名管理</button><button onclick="openCompany()">自社情報・印鑑</button><button onclick="showHidden()">非表示項目</button><button onclick="restoreBackup()" title="直前の保存データへ戻す">データ復元</button><button onclick="openFullBackup()" title="全データをファイルへ保存・復元">バックアップ</button><button class="primary" id="pdfBtn" onclick="exportPDF()">PDF出力</button></div></div>
 <div class="layout">
 <div class="card previewCard"><div class="head previewHeadV131"><span>出力プレビュー <span class="small">1ページ目のみ配置調整可・2ページ目以降はPDF固定表示</span></span><div class="coverHeadActions"><button type="button" id="coverDefaultBtn" onclick="saveCoverLayoutAsDefault()">この配置をデフォルト保存</button><button type="button" id="coverLayoutLockBtn" onclick="toggleCoverLayoutLock()">配置固定</button></div></div><div class="preview"><div class="paper previewCoverOnly" id="paper"></div><div id="detailPreviewPages" class="detailPreviewPages"></div></div></div>
 <div class="card inputCard"><div class="head">書類入力 <span class="small">基本は数量だけ入力・ここでの変更はこの書類だけ</span></div><div class="inputScroll"><div class="meta docMetaV128">
@@ -7741,5 +7741,69 @@ html.pdfBusyNow,html.pdfBusyNow body{overflow:hidden!important}
   };
 
   setTimeout(()=>{try{ensureFixedDocType()}catch(_){}},0);
+})();
+</script>
+
+
+<script id="v0159-invoice-qty-highlight-fix">
+(function(){
+  // 請求書への複製後や現場切替後も、数量値そのものから赤枠状態を復元する。
+  function refreshNow(){
+    if(typeof window.refreshQtyRowHighlights==='function'){
+      window.refreshQtyRowHighlights();
+    }
+  }
+  function refreshStable(){
+    refreshNow();
+    requestAnimationFrame(()=>{
+      refreshNow();
+      requestAnimationFrame(refreshNow);
+    });
+    setTimeout(refreshNow,60);
+  }
+
+  // render後にDOMが組み直されても必ず復元。
+  const prevRender=window.render;
+  if(typeof prevRender==='function'){
+    window.render=function(){
+      const out=prevRender.apply(this,arguments);
+      refreshStable();
+      return out;
+    };
+  }
+
+  // 現場/書類の読み込み直後にも復元。
+  const prevLoad=window.loadProjectState;
+  if(typeof prevLoad==='function'){
+    window.loadProjectState=function(){
+      const out=prevLoad.apply(this,arguments);
+      refreshStable();
+      return out;
+    };
+  }
+
+  // 「見積から請求書を作成」は内部でrenderまで行うため、その完了後に再判定。
+  const prevCreate=window.createInvoiceFromEstimate;
+  if(typeof prevCreate==='function'){
+    window.createInvoiceFromEstimate=function(){
+      const out=prevCreate.apply(this,arguments);
+      refreshStable();
+      return out;
+    };
+  }
+
+  // 行DOMの差し替えを監視して、数量が残っていれば赤枠を自動復元。
+  const root=document.querySelector('.inputCard');
+  if(root && typeof MutationObserver!=='undefined'){
+    let queued=false;
+    const ob=new MutationObserver(()=>{
+      if(queued)return;
+      queued=true;
+      requestAnimationFrame(()=>{queued=false;refreshNow();});
+    });
+    ob.observe(root,{childList:true,subtree:true});
+  }
+
+  refreshStable();
 })();
 </script>
