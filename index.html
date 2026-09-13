@@ -255,7 +255,7 @@ body{overscroll-behavior:none}
 }
 </style>
 
-</head><body><div id="pdfBusy">PDFを作成中…</div><div class="top"><div class="line"><div class="brand">ARTY WORKS <span style="font-size:10px;color:#9b8e83;font-weight:600">v0.1.156</span></div><div class="projectNow" id="projectNow">現場：—</div></div><div class="line tools"><button onclick="openProjects()">現場一覧</button><button onclick="newProject()">＋新規現場</button><select id="client"></select><button onclick="openClientManager()">取引先管理</button><button onclick="openRecipientManager()">宛名管理</button><button onclick="openCompany()">自社情報・印鑑</button><button onclick="showHidden()">非表示項目</button><button onclick="restoreBackup()" title="直前の保存データへ戻す">データ復元</button><button onclick="openFullBackup()" title="全データをファイルへ保存・復元">バックアップ</button><button class="primary" id="pdfBtn" onclick="exportPDF()">PDF出力</button></div></div>
+</head><body><div id="pdfBusy">PDFを作成中…</div><div class="top"><div class="line"><div class="brand">ARTY WORKS <span style="font-size:10px;color:#9b8e83;font-weight:600">v0.1.157</span></div><div class="projectNow" id="projectNow">現場：—</div></div><div class="line tools"><button onclick="openProjects()">現場一覧</button><button onclick="newProject()">＋新規現場</button><select id="client"></select><button onclick="openClientManager()">取引先管理</button><button onclick="openRecipientManager()">宛名管理</button><button onclick="openCompany()">自社情報・印鑑</button><button onclick="showHidden()">非表示項目</button><button onclick="restoreBackup()" title="直前の保存データへ戻す">データ復元</button><button onclick="openFullBackup()" title="全データをファイルへ保存・復元">バックアップ</button><button class="primary" id="pdfBtn" onclick="exportPDF()">PDF出力</button></div></div>
 <div class="layout">
 <div class="card previewCard"><div class="head previewHeadV131"><span>出力プレビュー <span class="small">1ページ目のみ配置調整可・2ページ目以降はPDF固定表示</span></span><div class="coverHeadActions"><button type="button" id="coverDefaultBtn" onclick="saveCoverLayoutAsDefault()">この配置をデフォルト保存</button><button type="button" id="coverLayoutLockBtn" onclick="toggleCoverLayoutLock()">配置固定</button></div></div><div class="preview"><div class="paper previewCoverOnly" id="paper"></div><div id="detailPreviewPages" class="detailPreviewPages"></div></div></div>
 <div class="card inputCard"><div class="head">書類入力 <span class="small">基本は数量だけ入力・ここでの変更はこの書類だけ</span></div><div class="inputScroll"><div class="meta docMetaV128">
@@ -265,7 +265,7 @@ body{overscroll-behavior:none}
       <label><input type="radio" name="docTypeRadio" value="estimate"><span>見積書</span></label>
       <label><input type="radio" name="docTypeRadio" value="invoice"><span>請求書</span></label>
       <label><input type="radio" name="docTypeRadio" value="request"><span>依頼書</span></label>
-      <select id="docType" aria-hidden="true" tabindex="-1"><option value="estimate">御見積書</option><option value="invoice">請求書</option><option value="request">依頼書</option></select>
+      <select id="docType" aria-hidden="true" tabindex="-1"><option value="estimate">御見積書</option><option value="invoice">請求書</option><option value="request">依頼書</option></select><button type="button" id="estimateToInvoiceBtn" class="estimateToInvoiceBtn" onclick="createInvoiceFromEstimate()">見積から請求書を作成</button>
     </div>
   </div>
 
@@ -7572,5 +7572,80 @@ html.pdfBusyNow,html.pdfBusyNow body{overflow:hidden!important}
     if(e.target&&e.target.matches&&e.target.matches('.inputCard .row .q'))updateQtyRowHighlight(e.target);
   },true);
   requestAnimationFrame(refreshQtyRowHighlights);
+})();
+</script>
+
+<style id="v0157-estimate-to-invoice">
+.estimateToInvoiceBtn{margin-left:auto;border:1px solid #8f7f73;background:#fff;border-radius:9px;padding:8px 11px;font-weight:900;color:#5f554d;white-space:nowrap}
+.estimateToInvoiceBtn:active{transform:translateY(1px)}
+@media(max-width:720px){.estimateToInvoiceBtn{width:100%;margin-left:0;margin-top:4px}}
+.projectDocBadge{display:inline-block;margin-right:7px;padding:2px 6px;border-radius:999px;background:#eee8e3;color:#655c55;font-size:10px;font-weight:900}
+</style>
+<script id="v0157-estimate-to-invoice-js">
+(function(){
+  const _updateDocumentTypeUI=window.updateDocumentTypeUI;
+  window.updateDocumentTypeUI=function(){
+    if(typeof _updateDocumentTypeUI==='function')_updateDocumentTypeUI();
+    const b=document.getElementById('estimateToInvoiceBtn');
+    if(b)b.style.display=((s.meta&&s.meta.docType)||'estimate')==='estimate'?'inline-flex':'none';
+  };
+
+  function docTypeLabel(t){return t==='invoice'?'請求書':t==='request'?'依頼書':'見積書'}
+
+  // 元の見積は残し、現場固有データを複製して別の請求書として作る。
+  window.createInvoiceFromEstimate=function(){
+    if(!s||!s.meta)return;
+    if((s.meta.docType||'estimate')!=='estimate'){
+      alert('見積書を開いている時だけ請求書を作成できます。');
+      return;
+    }
+    if(!confirm('この見積書を残したまま、内容を引き継いだ請求書を新しく作成しますか？'))return;
+    syncProjectFromState();
+    const src=projects.find(p=>p.id===activeProjectId);
+    if(!src){alert('現在の見積データを確認できませんでした。');return;}
+    const data=cloneData(src.data||projectPart(s));
+    data.meta=data.meta||{};
+    data.meta.docType='invoice';
+    data.meta.title=docTitleForType('invoice');
+    data.meta.date=today;
+    // 見積の有効期限を請求書の支払期限へ誤転用しない。
+    data.meta.deadline='';
+    data.meta.showDeadline=true;
+    data.meta.notesByDocType=data.meta.notesByDocType||{};
+    data.meta.notes=data.meta.notesByDocType.invoice||'';
+    const id='p'+Date.now()+Math.random().toString(36).slice(2,5);
+    const baseName=(data.meta.project||src.name||'請求書').trim()||'請求書';
+    const pr={id,name:baseName+'（請求書）',createdAt:Date.now(),updatedAt:Date.now(),data};
+    projects.push(pr);
+    localStorage.setItem(PROJECTS_K,JSON.stringify(projects));
+    activeProjectId=id;
+    localStorage.setItem(ACTIVE_PROJECT_K,id);
+    loadProjectState(pr);
+    applySavedCoverDefaultForDocType('invoice');
+    localStorage.setItem(K,JSON.stringify(s));
+    syncProjectFromState();
+    render();
+    updateProjectBadge();
+    alert('請求書を新しく作成しました。元の見積書は現場一覧に残っています。\n支払期限を確認してから発行してください。');
+  };
+
+  const _renderProjectList=window.renderProjectList;
+  window.renderProjectList=function(){
+    if(typeof _renderProjectList==='function')_renderProjectList();
+    document.querySelectorAll('.projectCard').forEach(card=>{
+      const open=card.querySelector('.open');
+      if(!open)return;
+      const m=(open.getAttribute('onclick')||'').match(/openProject\('([^']+)'\)/);
+      if(!m)return;
+      const pr=projects.find(p=>p.id===m[1]);
+      const meta=pr&&pr.data&&pr.data.meta||{};
+      const target=card.querySelector('.projectMeta');
+      if(target&&!target.querySelector('.projectDocBadge')){
+        target.insertAdjacentHTML('afterbegin','<span class="projectDocBadge">'+docTypeLabel(meta.docType||'estimate')+'</span>');
+      }
+    });
+  };
+
+  setTimeout(()=>{try{updateDocumentTypeUI()}catch(_){}},0);
 })();
 </script>
