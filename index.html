@@ -255,7 +255,7 @@ body{overscroll-behavior:none}
 }
 </style>
 
-</head><body><div id="pdfBusy">PDFを作成中…</div><div class="top"><div class="line"><div class="brand">ARTY WORKS <span style="font-size:10px;color:#9b8e83;font-weight:600">v0.1.155</span></div><div class="projectNow" id="projectNow">現場：—</div></div><div class="line tools"><button onclick="openProjects()">現場一覧</button><button onclick="newProject()">＋新規現場</button><select id="client"></select><button onclick="openClientManager()">取引先管理</button><button onclick="openRecipientManager()">宛名管理</button><button onclick="openCompany()">自社情報・印鑑</button><button onclick="showHidden()">非表示項目</button><button onclick="restoreBackup()" title="直前の保存データへ戻す">データ復元</button><button onclick="openFullBackup()" title="全データをファイルへ保存・復元">バックアップ</button><button class="primary" id="pdfBtn" onclick="exportPDF()">PDF出力</button></div></div>
+</head><body><div id="pdfBusy">PDFを作成中…</div><div class="top"><div class="line"><div class="brand">ARTY WORKS <span style="font-size:10px;color:#9b8e83;font-weight:600">v0.1.156</span></div><div class="projectNow" id="projectNow">現場：—</div></div><div class="line tools"><button onclick="openProjects()">現場一覧</button><button onclick="newProject()">＋新規現場</button><select id="client"></select><button onclick="openClientManager()">取引先管理</button><button onclick="openRecipientManager()">宛名管理</button><button onclick="openCompany()">自社情報・印鑑</button><button onclick="showHidden()">非表示項目</button><button onclick="restoreBackup()" title="直前の保存データへ戻す">データ復元</button><button onclick="openFullBackup()" title="全データをファイルへ保存・復元">バックアップ</button><button class="primary" id="pdfBtn" onclick="exportPDF()">PDF出力</button></div></div>
 <div class="layout">
 <div class="card previewCard"><div class="head previewHeadV131"><span>出力プレビュー <span class="small">1ページ目のみ配置調整可・2ページ目以降はPDF固定表示</span></span><div class="coverHeadActions"><button type="button" id="coverDefaultBtn" onclick="saveCoverLayoutAsDefault()">この配置をデフォルト保存</button><button type="button" id="coverLayoutLockBtn" onclick="toggleCoverLayoutLock()">配置固定</button></div></div><div class="preview"><div class="paper previewCoverOnly" id="paper"></div><div id="detailPreviewPages" class="detailPreviewPages"></div></div></div>
 <div class="card inputCard"><div class="head">書類入力 <span class="small">基本は数量だけ入力・ここでの変更はこの書類だけ</span></div><div class="inputScroll"><div class="meta docMetaV128">
@@ -650,7 +650,7 @@ function save(){
 }
 
 function flushStateNow(){
-  // v0.1.155: バックアップ復元直後の再読み込み時は、古いメモリ上の状態で復元データを上書きしない。
+  // v0.1.156: バックアップ復元直後の再読み込み時は、古いメモリ上の状態で復元データを上書きしない。
   if(window.__artyRestoreInProgress)return;
   try{
     localStorage.setItem(K,JSON.stringify(s));
@@ -7426,7 +7426,7 @@ html.pdfBusyNow,html.pdfBusyNow body{overflow:hidden!important}
     return {
       format:'ARTY_WORKS_ESTIMATE_BACKUP',
       formatVersion:1,
-      appVersion:'v0.1.155',
+      appVersion:'v0.1.156',
       createdAt:new Date().toISOString(),
       data:allEstimateStorage()
     };
@@ -7465,7 +7465,7 @@ html.pdfBusyNow,html.pdfBusyNow body{overflow:hidden!important}
       if(typeof save==='function')save();
       const payload=makeBackupObject();
       const txt=JSON.stringify(payload,null,2);
-      const name='v0.1.155_ARTYWORKS_バックアップ_'+timestampForFile()+'.json';
+      const name='v0.1.156_ARTYWORKS_バックアップ_'+timestampForFile()+'.json';
       const blob=new Blob([txt],{type:'application/json'});
       const file=new File([blob],name,{type:'application/json'});
       if(navigator.share && (!navigator.canShare || navigator.canShare({files:[file]}))){
@@ -7513,5 +7513,64 @@ html.pdfBusyNow,html.pdfBusyNow body{overflow:hidden!important}
     if(bad.length){window.__artyRestoreInProgress=false;alert('復元前データの書き戻し確認に失敗しました。再読み込みは行いません。');return;}
     localStorage.removeItem(EMERGENCY_K);alert('復元前の状態へ戻しました。アプリを再読み込みします。');location.reload();
   };
+})();
+</script>
+
+
+<style id="v0156-qty-row-highlight">
+/* v0.1.156: 数量入力済みの行を一目で判別できるよう、現調アプリ同様に赤枠で強調 */
+.inputCard .row.qtyEntered{
+  position:relative;
+  border:2px solid #d94b45!important;
+  border-radius:10px!important;
+  background:#fff9f8!important;
+  padding:4px 5px!important;
+  margin:2px -5px!important;
+}
+.inputCard .row.qtyEntered .q{
+  border-color:#d94b45!important;
+  background:#fff!important;
+}
+.inputCard .row.qtyEntered .rowNo{
+  color:#b63b36!important;
+  font-weight:900!important;
+}
+</style>
+<script id="v0156-qty-row-highlight-js">
+(function(){
+  function hasEnteredQty(el){
+    if(!el)return false;
+    const raw=String(el.value??'').trim();
+    if(raw==='')return false;
+    const n=Number(raw);
+    return Number.isFinite(n) && n!==0;
+  }
+  window.updateQtyRowHighlight=function(el){
+    const row=el&&el.closest?el.closest('.row'):null;
+    if(!row)return;
+    row.classList.toggle('qtyEntered',hasEnteredQty(el));
+  };
+  window.refreshQtyRowHighlights=function(){
+    document.querySelectorAll('.inputCard .row .q').forEach(updateQtyRowHighlight);
+  };
+
+  const oldCommit=window.commitNum;
+  window.commitNum=function(){
+    const el=window.activeQty||activeQty;
+    if(typeof oldCommit==='function')oldCommit();
+    if(el&&el.classList&&el.classList.contains('q'))updateQtyRowHighlight(el);
+  };
+
+  const oldRender=window.render;
+  window.render=function(){
+    const out=oldRender.apply(this,arguments);
+    requestAnimationFrame(refreshQtyRowHighlights);
+    return out;
+  };
+
+  document.addEventListener('input',function(e){
+    if(e.target&&e.target.matches&&e.target.matches('.inputCard .row .q'))updateQtyRowHighlight(e.target);
+  },true);
+  requestAnimationFrame(refreshQtyRowHighlights);
 })();
 </script>
