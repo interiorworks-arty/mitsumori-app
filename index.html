@@ -255,7 +255,7 @@ body{overscroll-behavior:none}
 }
 </style>
 
-</head><body><div id="pdfBusy">PDFを作成中…</div><div class="top"><div class="line"><div class="brand">ARTY WORKS <span style="font-size:10px;color:#9b8e83;font-weight:600">v0.1.160</span></div><div class="projectNow" id="projectNow">現場：—</div></div><div class="line tools"><button onclick="openProjects()">現場一覧</button><button onclick="newProject()">＋新規現場</button><select id="client"></select><button onclick="openClientManager()">取引先管理</button><button onclick="openRecipientManager()">宛名管理</button><button onclick="openCompany()">自社情報・印鑑</button><button onclick="showHidden()">非表示項目</button><button onclick="restoreBackup()" title="直前の保存データへ戻す">データ復元</button><button onclick="openFullBackup()" title="全データをファイルへ保存・復元">バックアップ</button><button class="primary" id="pdfBtn" onclick="exportPDF()">PDF出力</button></div></div>
+</head><body><div id="pdfBusy">PDFを作成中…</div><div class="top"><div class="line"><div class="brand">ARTY WORKS <span style="font-size:10px;color:#9b8e83;font-weight:600">v0.1.161</span></div><div class="projectNow" id="projectNow">現場：—</div></div><div class="line tools"><button onclick="openProjects()">現場一覧</button><button onclick="newProject()">＋新規現場</button><select id="client"></select><button onclick="openClientManager()">取引先管理</button><button onclick="openRecipientManager()">宛名管理</button><button onclick="openCompany()">自社情報・印鑑</button><button onclick="showHidden()">非表示項目</button><button onclick="restoreBackup()" title="直前の保存データへ戻す">データ復元</button><button onclick="openFullBackup()" title="全データをファイルへ保存・復元">バックアップ</button><button class="primary" id="pdfBtn" onclick="exportPDF()">PDF出力</button></div></div>
 <div class="layout">
 <div class="card previewCard"><div class="head previewHeadV131"><span>出力プレビュー <span class="small">1ページ目のみ配置調整可・2ページ目以降はPDF固定表示</span></span><div class="coverHeadActions"><button type="button" id="coverDefaultBtn" onclick="saveCoverLayoutAsDefault()">この配置をデフォルト保存</button><button type="button" id="coverLayoutLockBtn" onclick="toggleCoverLayoutLock()">配置固定</button></div></div><div class="preview"><div class="paper previewCoverOnly" id="paper"></div><div id="detailPreviewPages" class="detailPreviewPages"></div></div></div>
 <div class="card inputCard"><div class="head">書類入力 <span class="small">基本は数量だけ入力・ここでの変更はこの書類だけ</span></div><div class="inputScroll"><div class="meta docMetaV128">
@@ -359,7 +359,7 @@ body{overscroll-behavior:none}
     <label>品名<input id="inlineName"></label>
     <label>仕様<input id="inlineSpec" placeholder="任意"></label>
     <label>単位<div class="inlineUnitWrap"><input id="inlineUnit" list="unitMasterDatalist"><button type="button" onclick="openUnitMaster()">単位マスター</button></div></label>
-    <label>単価<input id="inlinePrice" type="number" inputmode="decimal"></label><label>税区分<select id="inlineTax"><option value="taxable">課税</option><option value="nontaxable">非課税</option></select></label>
+    <label>単価<input id="inlinePrice" type="number" inputmode="decimal"></label><label>税区分<select id="inlineTax"><option value="taxable">課税</option><option value="nontaxable">非課税</option></select></label><label>【】文字色<div class="inlineBracketColorWrap"><select id="inlineBracketColor" onchange="syncInlineBracketColorSample()"><option value="black">黒</option><option value="red">赤</option><option value="blue">青</option></select><span id="inlineBracketColorSample">【概算】</span></div><span class="small bracketColorHelp">品名の【〇〇】部分だけ色が変わります</span></label>
   </div>
   <div id="inlineSection" class="small" style="margin-top:8px"></div>
   <div class="ma" style="justify-content:space-between">
@@ -915,6 +915,31 @@ function sectionItemName(si,k,base){return isLocalExtraSection(si)||isFreeExtraS
 function sectionItemSpec(si,k,base){return isLocalExtraSection(si)||isFreeExtraSection(si)?(base||''):itemSpecByKey(k,base)}
 function sectionItemUnit(si,k,base){return isLocalExtraSection(si)||isFreeExtraSection(si)?base:itemUnitByKey(k,base)}
 function sectionItemPrice(si,k,base){return isLocalExtraSection(si)||isFreeExtraSection(si)?Number(base||0):priceByKey(k,base)}
+function estimateBracketColorByKey(k){
+  const e=(s.localItemEdits&&s.localItemEdits[k])||{};
+  return (e.bracketColor==='red'||e.bracketColor==='blue')?e.bracketColor:'black';
+}
+function setEstimateBracketColor(k,v){
+  s.localItemEdits=s.localItemEdits||{};
+  const e={...(s.localItemEdits[k]||{})};
+  if(v==='red'||v==='blue')e.bracketColor=v;else delete e.bracketColor;
+  if(Object.keys(e).length)s.localItemEdits[k]=e;else delete s.localItemEdits[k];
+}
+function itemBracketColor(si,k,it,scope){
+  if((scope==='local')||isLocalExtraSection(si)||isFreeExtraSection(si))return (it&&((it.bracketColor==='red'||it.bracketColor==='blue')?it.bracketColor:'black'))||'black';
+  return estimateBracketColorByKey(k);
+}
+function formatBracketAccent(textValue,color){
+  const raw=String(textValue||'');
+  if(color!=='red'&&color!=='blue')return esc(raw);
+  const re=/【[^】]*】/g;let out='',last=0,m;
+  while((m=re.exec(raw))){out+=esc(raw.slice(last,m.index));out+=`<span class="bracketAccent bracket-${color}">${esc(m[0])}</span>`;last=m.index+m[0].length;}
+  out+=esc(raw.slice(last));return out;
+}
+function syncInlineBracketColorSample(){
+  const sel=document.getElementById('inlineBracketColor'),sample=document.getElementById('inlineBracketColorSample');if(!sel||!sample)return;
+  sample.classList.remove('sample-red','sample-blue');if(sel.value==='red')sample.classList.add('sample-red');if(sel.value==='blue')sample.classList.add('sample-blue');
+}
 function baseTaxByKey(k,base='taxable'){
   const ce=clientItemEditByKey(k)||{};
   return (ce.tax==='nontaxable'||ce.tax==='taxable')?ce.tax:(base==='nontaxable'?'nontaxable':'taxable');
@@ -947,6 +972,8 @@ function saveClientItemEdit(k,name,spec,unit,price,basePrice,baseName='',baseSpe
     const clientSpec=(typeof ce.spec==='string')?ce.spec:(baseSpec||'');
     const clientUnit=(typeof ce.unit==='string'&&ce.unit.trim())?ce.unit:baseUnit;
     const le={};
+    const prevLocal=(s.localItemEdits&&s.localItemEdits[k])||{};
+    if(prevLocal.bracketColor==='red'||prevLocal.bracketColor==='blue')le.bracketColor=prevLocal.bracketColor;
     const n=String(name||'').trim(),sp=String(spec||''),u=String(unit||'').trim();
     if(n!==String(clientName||''))le.name=n;
     if(sp!==String(clientSpec||''))le.spec=sp;
@@ -2251,7 +2278,7 @@ let body='',summaryRows=[],sum=0,taxableSum=0,nonTaxSum=0,any=false;currentSecti
     let k=key(si,ii),q=s.qty[k];if(isItemHidden(k))return;
     if(q!==undefined&&q!==''&&Number(q)!==0){
       let p=sectionItemPrice(si,k,it.price),a=lineAmount(q,p),t=sectionItemTax(si,k,it.tax||'taxable');
-      rows.push({kind:'item',id:inputRowIdBuiltin(si,ii),base:ii,n:sectionItemName(si,k,it.name),spec:sectionItemSpec(si,k,it.spec||''),p,q,u:sectionItemUnit(si,k,it.unit),a,t});
+      rows.push({kind:'item',id:inputRowIdBuiltin(si,ii),base:ii,n:sectionItemName(si,k,it.name),spec:sectionItemSpec(si,k,it.spec||''),p,q,u:sectionItemUnit(si,k,it.unit),a,t,bracketColor:itemBracketColor(si,k,it)});
       st+=a;if(t==='nontaxable')nonTaxSum+=a;else taxableSum+=a;
     }
   });
@@ -2260,7 +2287,7 @@ let body='',summaryRows=[],sum=0,taxableSum=0,nonTaxSum=0,any=false;currentSecti
     let k=userItemKey(si,it),q=s.qty[k];if(isItemHidden(k))return;
     if(q!==undefined&&q!==''&&Number(q)!==0){
       let p=priceByKey(k,Number(it.price)||0),a=lineAmount(q,p),t=itemTaxByKey(k,it.tax||'taxable');
-      rows.push({kind:'item',id:(it._scope==='local'?inputRowIdLocalUser(si,it.id):inputRowIdUser(si,it.id)),base:1000+ui,n:itemNameByKey(k,it.name),spec:itemSpecByKey(k,it.spec||''),p,q,u:itemUnitByKey(k,it.unit||''),a,t});
+      rows.push({kind:'item',id:(it._scope==='local'?inputRowIdLocalUser(si,it.id):inputRowIdUser(si,it.id)),base:1000+ui,n:itemNameByKey(k,it.name),spec:itemSpecByKey(k,it.spec||''),p,q,u:itemUnitByKey(k,it.unit||''),a,t,bracketColor:itemBracketColor(si,k,it,it._scope)});
       st+=a;if(t==='nontaxable')nonTaxSum+=a;else taxableSum+=a;
     }
   });
@@ -2297,7 +2324,7 @@ let body='',summaryRows=[],sum=0,taxableSum=0,nonTaxSum=0,any=false;currentSecti
       if(r.kind==='text'){
         body+=`<tr class="previewTextRow" data-pid="${esc(r.id)}" data-si="${si}"><td colspan="5"><span class="previewText">${esc(r.text)}</span></td></tr>`;
       }else{
-        body+=`<tr data-pid="${esc(r.id)}" data-si="${si}"><td><span class="previewDrag" data-id="${esc(r.id)}" data-si="${si}">≡</span><span class="itemTwo"><span class="itemMain">${esc(r.n)}</span><span class="itemSpec">${esc(r.spec||'')}</span></span></td><td>${esc(r.q)}</td><td>${esc(r.u)}</td><td>${yen(r.p)}</td><td>${yen(r.a)}</td></tr>`;
+        body+=`<tr data-pid="${esc(r.id)}" data-si="${si}"><td><span class="previewDrag" data-id="${esc(r.id)}" data-si="${si}">≡</span><span class="itemTwo"><span class="itemMain">${formatBracketAccent(r.n,r.bracketColor)}</span><span class="itemSpec">${esc(r.spec||'')}</span></span></td><td>${esc(r.q)}</td><td>${esc(r.u)}</td><td>${yen(r.p)}</td><td>${yen(r.a)}</td></tr>`;
       }
     });
     body+='</tbody></table>';
@@ -2894,12 +2921,14 @@ function openInlineFrom(el){
     inlineSpec.value=sectionItemSpec(si,k,it.spec||'');
     inlineUnit.value=sectionItemUnit(si,k,it.unit||'');
     inlinePrice.value=sectionItemPrice(si,k,Number(it.price)||0);inlineTax.value=sectionItemTax(si,k,it.tax||'taxable');
+    inlineBracketColor.value=itemBracketColor(si,k,it);syncInlineBracketColorSample();
   }else{
     const id=el.dataset.userId,scope=el.dataset.userScope||'global';
     const arr=scope==='local'?localUserBucket(si):(s.userMaster[si]||[]),it=arr.find(x=>x.id===id);if(!it)return;
     const k=scope==='local'?lukey(si,id):ukey(si,id);
     inlineSel={kind,si,id,scope};
     inlineName.value=itemNameByKey(k,it.name)||'';inlineSpec.value=itemSpecByKey(k,it.spec||'');inlineUnit.value=itemUnitByKey(k,it.unit||'式');inlinePrice.value=priceByKey(k,Number(it.price)||0);inlineTax.value=itemTaxByKey(k,it.tax||'taxable');
+    inlineBracketColor.value=itemBracketColor(si,k,it,scope);syncInlineBracketColorSample();
   }
   inlineSection.textContent='工事区分：'+secName(si);
   inlineEditModal.classList.add('on');
@@ -2957,27 +2986,27 @@ function openInlineMovePosition(){
 function closeInlineEdit(){inlineEditModal.classList.remove('on');inlineSel=null}
 function saveInlineEdit(){
   if(!inlineSel)return;
-  const name=inlineName.value.trim(),spec=inlineSpec.value.trim(),unit=inlineUnit.value.trim(),price=Number(inlinePrice.value)||0,tax=inlineTax.value==='nontaxable'?'nontaxable':'taxable';
+  const name=inlineName.value.trim(),spec=inlineSpec.value.trim(),unit=inlineUnit.value.trim(),price=Number(inlinePrice.value)||0,tax=inlineTax.value==='nontaxable'?'nontaxable':'taxable',bracketColor=(inlineBracketColor.value==='red'||inlineBracketColor.value==='blue')?inlineBracketColor.value:'black';
   if(!name){alert('項目名を入力してください');return}
   if(inlineSel.kind==='builtin'){
     const it=MASTER[inlineSel.si]&&MASTER[inlineSel.si].items[inlineSel.ii];if(!it)return;
     const k=key(inlineSel.si,inlineSel.ii);
     if(isLocalExtraSection(inlineSel.si)||isFreeExtraSection(inlineSel.si)){
-      const x=extraSectionState(inlineSel.si);if(!x||!x.items[inlineSel.ii])return;x.items[inlineSel.ii]={...x.items[inlineSel.ii],name,spec,unit,price,tax};
+      const x=extraSectionState(inlineSel.si);if(!x||!x.items[inlineSel.ii])return;x.items[inlineSel.ii]={...x.items[inlineSel.ii],name,spec,unit,price,tax,bracketColor};
       if(isGlobalExtraSection(inlineSel.si))saveGlobalExtraSections();else save();syncExtraSectionsIntoMaster();
-    }else saveClientItemEdit(k,name,spec,unit,price,Number(it.price)||0,it.name,it.spec||'',it.unit||'',tax,it.tax||'taxable');
+    }else{saveClientItemEdit(k,name,spec,unit,price,Number(it.price)||0,it.name,it.spec||'',it.unit||'',tax,it.tax||'taxable');setEstimateBracketColor(k,bracketColor);save();}
   }else{
     const arr=inlineSel.scope==='local'?localUserBucket(inlineSel.si):(s.userMaster[inlineSel.si]||[]),it=arr.find(x=>x.id===inlineSel.id);if(!it)return;
     const k=inlineSel.scope==='local'?lukey(inlineSel.si,inlineSel.id):ukey(inlineSel.si,inlineSel.id);
-    if(inlineSel.scope==='local'){Object.assign(it,{name,spec,unit:unit||'式',price,tax});save()}else saveClientItemEdit(k,name,spec,unit||'式',price,Number(it.price)||0,it.name,it.spec||'',it.unit||'式',tax,it.tax||'taxable');
+    if(inlineSel.scope==='local'){Object.assign(it,{name,spec,unit:unit||'式',price,tax,bracketColor});save()}else{saveClientItemEdit(k,name,spec,unit||'式',price,Number(it.price)||0,it.name,it.spec||'',it.unit||'式',tax,it.tax||'taxable');setEstimateBracketColor(k,bracketColor);save();}
   }
   closeInlineEdit();render();
 }
 function copyInlineItem(){
   if(!inlineSel)return;
-  const si=inlineSel.si,name=inlineName.value.trim(),spec=inlineSpec.value.trim(),unit=inlineUnit.value.trim()||'式',price=Number(inlinePrice.value)||0,tax=inlineTax.value==='nontaxable'?'nontaxable':'taxable';
+  const si=inlineSel.si,name=inlineName.value.trim(),spec=inlineSpec.value.trim(),unit=inlineUnit.value.trim()||'式',price=Number(inlinePrice.value)||0,tax=inlineTax.value==='nontaxable'?'nontaxable':'taxable',bracketColor=(inlineBracketColor.value==='red'||inlineBracketColor.value==='blue')?inlineBracketColor.value:'black';
   if(!name){alert('項目名を入力してください');return}
-  const id='cp'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),obj={id,name,spec,unit,price,tax};
+  const id='cp'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),obj={id,name,spec,unit,price,tax,bracketColor};
   let newId;
   localUserBucket(si).push(obj);newId=inputRowIdLocalUser(si,id)
   const sourceId=inlineSel.kind==='builtin'?inputRowIdBuiltin(si,inlineSel.ii):(inlineSel.scope==='local'?inputRowIdLocalUser(si,inlineSel.id):inputRowIdUser(si,inlineSel.id));
@@ -7858,3 +7887,19 @@ body .docTypeChooser .docTypeFixedWrap{display:flex!important;}
   setTimeout(hardLockDocType,0);
 })();
 </script>
+
+<style id="v0161-bracket-accent">
+/* v0.1.161: 入力画面の項目編集で【〇〇】部分だけ黒/赤/青を指定。書類ローカル。 */
+#inlineEditModal .editGrid{grid-template-columns:minmax(190px,1.1fr) 130px 120px 160px!important}
+#inlineEditModal .inlineBracketColorWrap{display:grid;grid-template-columns:92px minmax(70px,1fr);gap:8px;align-items:center}
+#inlineEditModal .inlineBracketColorWrap select{width:100%}
+#inlineBracketColorSample{display:inline-flex;align-items:center;justify-content:center;min-height:44px;border:1px solid var(--line);border-radius:9px;background:#fff;font-weight:900;color:#111}
+#inlineBracketColorSample.sample-red{color:#c62828!important}
+#inlineBracketColorSample.sample-blue{color:#1565c0!important}
+#inlineEditModal .bracketColorHelp{display:block;margin-top:4px;line-height:1.35}
+.bracketAccent.bracket-red{color:#c62828!important;font-weight:900!important}
+.bracketAccent.bracket-blue{color:#1565c0!important;font-weight:900!important}
+.pdfPageInner .bracketAccent.bracket-red{color:#c62828!important}
+.pdfPageInner .bracketAccent.bracket-blue{color:#1565c0!important}
+@media(max-width:760px){#inlineEditModal .editGrid{grid-template-columns:1fr 1fr!important}#inlineEditModal .editGrid>label:nth-child(1),#inlineEditModal .editGrid>label:nth-child(2){grid-column:1/-1!important}}
+</style>
