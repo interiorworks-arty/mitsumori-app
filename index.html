@@ -255,7 +255,7 @@ body{overscroll-behavior:none}
 }
 </style>
 
-</head><body><div id="pdfBusy">PDFを作成中…</div><div class="top"><div class="line"><div class="brand">ARTY WORKS <span style="font-size:10px;color:#9b8e83;font-weight:600">v0.1.166</span></div><div class="projectNow" id="projectNow">現場：—</div></div><div class="line tools"><button onclick="openProjects()">現場一覧</button><button onclick="newProject()">＋新規現場</button><select id="client"></select><button onclick="openClientManager()">取引先管理</button><button onclick="openRecipientManager()">宛名管理</button><button onclick="openCompany()">自社情報・印鑑</button><button onclick="showHidden()">非表示項目</button><button onclick="restoreBackup()" title="直前の保存データへ戻す">データ復元</button><button onclick="openFullBackup()" title="全データをファイルへ保存・復元">バックアップ</button><button class="primary" id="pdfBtn" onclick="exportPDF()">PDF出力</button></div></div>
+</head><body><div id="pdfBusy">PDFを作成中…</div><div class="top"><div class="line"><div class="brand">ARTY WORKS <span style="font-size:10px;color:#9b8e83;font-weight:600">v0.1.167</span></div><div class="projectNow" id="projectNow">現場：—</div></div><div class="line tools"><button onclick="openProjects()">現場一覧</button><button onclick="newProject()">＋新規現場</button><select id="client"></select><button onclick="openClientManager()">取引先管理</button><button onclick="openRecipientManager()">宛名管理</button><button onclick="openCompany()">自社情報・印鑑</button><button onclick="showHidden()">非表示項目</button><button onclick="restoreBackup()" title="直前の保存データへ戻す">データ復元</button><button onclick="openFullBackup()" title="全データをファイルへ保存・復元">バックアップ</button><button class="primary" id="pdfBtn" onclick="exportPDF()">PDF出力</button></div></div>
 <div class="layout">
 <div class="card previewCard"><div class="head previewHeadV131"><span>出力プレビュー <span class="small">1ページ目のみ配置調整可・2ページ目以降はPDF固定表示</span></span><div class="coverHeadActions"><button type="button" id="coverDefaultBtn" onclick="saveCoverLayoutAsDefault()">この配置をデフォルト保存</button><button type="button" id="coverLayoutLockBtn" onclick="toggleCoverLayoutLock()">配置固定</button></div></div><div class="preview"><div class="paper previewCoverOnly" id="paper"></div><div id="detailPreviewPages" class="detailPreviewPages"></div></div></div>
 <div class="card inputCard"><div class="head">書類入力 <span class="small">基本は数量だけ入力・ここでの変更はこの書類だけ</span></div><div class="inputScroll"><div class="meta docMetaV128">
@@ -7956,3 +7956,129 @@ body .docTypeChooser .docTypeFixedWrap{display:flex!important;}
 </style>
 
 <!-- v0.1.166: 見積・請求の削除を完全分離。請求書削除時は元見積を残す旨を明示。 -->
+
+
+<style id="v0167-security">
+/* v0.1.167: アプリ内PINロック / 自動ロック / 機密操作の再認証 */
+#securityOverlay{position:fixed;inset:0;z-index:200000;background:rgba(34,30,27,.96);display:none;align-items:center;justify-content:center;padding:22px}
+#securityOverlay.show{display:flex!important}
+.securityCard{width:min(440px,92vw);background:#f8f4ef;border:1px solid #bcae9f;border-radius:18px;padding:24px;box-shadow:0 22px 60px rgba(0,0,0,.35);color:#2d2926}
+.securityCard h2{margin:0 0 8px;font-size:24px}.securityCard p{margin:0 0 16px;color:#6b625b;line-height:1.55}
+.securityPin{width:100%;font-size:26px;letter-spacing:.35em;text-align:center;font-weight:900;padding:12px 14px;border:1px solid #bcae9f;border-radius:11px;background:#fff;color:#2d2926}
+.securityActions{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap}.securityActions button{min-height:42px}
+.securityError{min-height:22px;margin-top:10px;color:#b42318;font-weight:800}
+#securityModal{position:fixed;inset:0;z-index:190000;background:rgba(0,0,0,.48);display:none;align-items:center;justify-content:center;padding:18px}
+#securityModal.show{display:flex!important}.securitySettings{width:min(560px,95vw);background:#f8f4ef;border-radius:16px;padding:20px;border:1px solid #bcae9f;max-height:90vh;overflow:auto;color:#2d2926}
+.securitySettings h2{margin:0 0 14px}.securityGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.securityGrid .full{grid-column:1/-1}.securitySettings label{font-weight:800;display:block;margin-bottom:5px}.securitySettings input,.securitySettings select{width:100%;padding:10px;border:1px solid #bcae9f;border-radius:9px;background:#fff;font-size:16px}.securityHelp{font-size:12px;color:#6b625b;line-height:1.45;margin-top:5px}.securityStatus{padding:10px 12px;border-radius:9px;background:#eee7df;font-weight:800;margin-bottom:12px}
+#securityTopBtn{white-space:nowrap}
+@media(max-width:700px){.securityGrid{grid-template-columns:1fr}.securityGrid .full{grid-column:1}.securityCard{padding:20px}}
+</style>
+
+<div id="securityOverlay" aria-hidden="true">
+  <div class="securityCard">
+    <h2>🔒 ARTY WORKS</h2>
+    <p id="securityLockMessage">PINを入力してロックを解除してください。</p>
+    <input id="securityUnlockPin" class="securityPin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" aria-label="PIN">
+    <div id="securityUnlockError" class="securityError"></div>
+    <div class="securityActions"><button class="primary" id="securityUnlockBtn" type="button">ロック解除</button></div>
+  </div>
+</div>
+
+<div id="securityModal" aria-hidden="true">
+  <div class="securitySettings">
+    <h2>セキュリティ</h2>
+    <div id="securityStatus" class="securityStatus">確認中…</div>
+    <div class="securityGrid">
+      <div><label>新しいPIN（4〜6桁）</label><input id="securityNewPin" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>
+      <div><label>PIN確認</label><input id="securityNewPin2" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password"></div>
+      <div><label>自動ロック</label><select id="securityTimeout"><option value="1">1分</option><option value="5">5分</option><option value="15">15分</option><option value="30">30分</option><option value="0">自動ロックなし</option></select></div>
+      <div><label>アプリを離れた時</label><select id="securityOnHide"><option value="1">ロックする</option><option value="0">ロックしない</option></select></div>
+      <div class="full"><div class="securityHelp">PINはこの端末内にハッシュ化して保存します。Cloudflare側のメール認証とは別の「端末内ロック」です。</div></div>
+    </div>
+    <div class="securityActions">
+      <button type="button" id="securityLockNow">今すぐロック</button>
+      <button type="button" id="securityDisable">PINを無効化</button>
+      <button type="button" id="securityClose">閉じる</button>
+      <button class="save" type="button" id="securitySave">保存</button>
+    </div>
+  </div>
+</div>
+
+<script id="v0167-security-script">
+(()=>{
+  'use strict';
+  const CFG='arty_security_v1', SESSION='arty_security_unlocked_v1';
+  let cfg={enabled:false,pinHash:'',timeoutMin:15,lockOnHide:true};
+  let lastActivity=Date.now(), failed=0, blockedUntil=0, reauthResolve=null;
+  const $=id=>document.getElementById(id);
+  const readCfg=()=>{try{const v=JSON.parse(localStorage.getItem(CFG)||'null');if(v&&typeof v==='object')cfg={...cfg,...v};}catch(e){}};
+  const saveCfg=()=>localStorage.setItem(CFG,JSON.stringify(cfg));
+  async function hashPin(pin){
+    const data=new TextEncoder().encode('ARTY-WORKS|'+pin+'|v1');
+    const dig=await crypto.subtle.digest('SHA-256',data);
+    return [...new Uint8Array(dig)].map(b=>b.toString(16).padStart(2,'0')).join('');
+  }
+  const validPin=p=>/^\d{4,6}$/.test(p||'');
+  function setLockedUI(on,msg){
+    const ov=$('securityOverlay'); if(!ov)return;
+    ov.classList.toggle('show',!!on);ov.setAttribute('aria-hidden',on?'false':'true');
+    if(msg)$('securityLockMessage').textContent=msg;
+    if(on){sessionStorage.removeItem(SESSION);setTimeout(()=>$('securityUnlockPin')?.focus(),80)}else{sessionStorage.setItem(SESSION,'1');$('securityUnlockPin').value='';$('securityUnlockError').textContent='';lastActivity=Date.now()}
+  }
+  function lockNow(reason){if(!cfg.enabled)return;setLockedUI(true,reason||'PINを入力してロックを解除してください。')}
+  async function verify(pin){if(!cfg.enabled)return true;return (await hashPin(pin))===cfg.pinHash}
+  async function unlock(){
+    const now=Date.now();if(now<blockedUntil){$('securityUnlockError').textContent='入力回数が多いため少し待ってください。';return}
+    const pin=$('securityUnlockPin').value;
+    if(await verify(pin)){failed=0;setLockedUI(false);return}
+    failed++;$('securityUnlockError').textContent='PINが違います。';$('securityUnlockPin').value='';
+    if(failed>=5){blockedUntil=Date.now()+30000;failed=0;$('securityUnlockError').textContent='5回失敗しました。30秒後に再試行してください。'}
+  }
+  function refreshSettings(){
+    $('securityStatus').textContent=cfg.enabled?'PINロック：有効':'PINロック：未設定';
+    $('securityTimeout').value=String(cfg.timeoutMin??15);$('securityOnHide').value=cfg.lockOnHide?'1':'0';
+    $('securityDisable').disabled=!cfg.enabled;
+  }
+  function openSecurity(first=false){refreshSettings();$('securityModal').classList.add('show');$('securityModal').setAttribute('aria-hidden','false');if(first)$('securityStatus').textContent='最初に4〜6桁のPINを設定してください。'}
+  function closeSecurity(){$('securityModal').classList.remove('show');$('securityModal').setAttribute('aria-hidden','true');$('securityNewPin').value='';$('securityNewPin2').value=''}
+  async function saveSecurity(){
+    const p1=$('securityNewPin').value,p2=$('securityNewPin2').value;
+    if(p1||p2){if(!validPin(p1)){alert('PINは数字4〜6桁で入力してください。');return}if(p1!==p2){alert('PIN確認が一致しません。');return}cfg.pinHash=await hashPin(p1);cfg.enabled=true;}
+    else if(!cfg.enabled){alert('新しいPINを入力してください。');return}
+    cfg.timeoutMin=Number($('securityTimeout').value)||0;cfg.lockOnHide=$('securityOnHide').value==='1';saveCfg();closeSecurity();setLockedUI(false);alert('セキュリティ設定を保存しました。');
+  }
+  async function disableSecurity(){
+    if(!cfg.enabled)return;const pin=prompt('PINを入力してください。');if(pin===null)return;if(!(await verify(pin))){alert('PINが違います。');return}
+    if(!confirm('PINロックを無効にしますか？'))return;cfg={enabled:false,pinHash:'',timeoutMin:15,lockOnHide:true};saveCfg();sessionStorage.removeItem(SESSION);refreshSettings();alert('PINロックを無効にしました。');
+  }
+  async function reauth(label){
+    if(!cfg.enabled)return true;
+    const pin=prompt((label||'この操作')+'にはPIN確認が必要です。\nPINを入力してください。');if(pin===null)return false;
+    if(await verify(pin))return true;alert('PINが違います。');return false;
+  }
+  function wrapSensitive(name,label){
+    const orig=window[name];if(typeof orig!=='function'||orig.__securityWrapped)return;
+    const w=async function(...args){if(!(await reauth(label)))return;return orig.apply(this,args)};w.__securityWrapped=true;window[name]=w;
+  }
+  function installTopButton(){
+    if($('securityTopBtn'))return;const tools=document.querySelector('.top .tools');if(!tools)return;
+    const b=document.createElement('button');b.id='securityTopBtn';b.type='button';b.textContent='🔒 セキュリティ';b.onclick=()=>openSecurity(false);
+    const pdf=$('pdfBtn');tools.insertBefore(b,pdf||null);
+  }
+  function activity(){if(!$('securityOverlay')?.classList.contains('show'))lastActivity=Date.now()}
+  function timerCheck(){if(!cfg.enabled||cfg.timeoutMin<=0||$('securityOverlay')?.classList.contains('show'))return;if(Date.now()-lastActivity>=cfg.timeoutMin*60000)lockNow('一定時間操作がなかったためロックしました。')}
+  function init(){
+    readCfg();installTopButton();
+    $('securityUnlockBtn').onclick=unlock;$('securityUnlockPin').addEventListener('keydown',e=>{if(e.key==='Enter')unlock()});
+    $('securityClose').onclick=closeSecurity;$('securitySave').onclick=saveSecurity;$('securityDisable').onclick=disableSecurity;$('securityLockNow').onclick=()=>{closeSecurity();lockNow('手動でロックしました。')};
+    ['pointerdown','keydown','touchstart'].forEach(ev=>document.addEventListener(ev,activity,{passive:true}));setInterval(timerCheck,15000);
+    document.addEventListener('visibilitychange',()=>{if(document.hidden&&cfg.enabled&&cfg.lockOnHide){sessionStorage.removeItem(SESSION)}else if(!document.hidden&&cfg.enabled&&cfg.lockOnHide){lockNow('アプリに戻ったためロックしました。')}});
+    setTimeout(()=>{wrapSensitive('restoreBackup','データ復元');wrapSensitive('openFullBackup','バックアップ操作')},0);
+    if(cfg.enabled){if(sessionStorage.getItem(SESSION)==='1')setLockedUI(false);else lockNow('PINを入力してロックを解除してください。')}
+    else setTimeout(()=>openSecurity(true),250);
+  }
+  window.artySecurity={lockNow,openSecurity,reauth};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+})();
+</script>
+<!-- v0.1.167: PINは端末内ロック。外部アクセス遮断はCloudflare Accessを別途設定する。 -->
