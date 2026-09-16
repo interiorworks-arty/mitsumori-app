@@ -255,7 +255,7 @@ body{overscroll-behavior:none}
 }
 </style>
 
-</head><body><div id="pdfBusy">PDFを作成中…</div><div class="top"><div class="line"><div class="brand">ARTY WORKS <span style="font-size:10px;color:#9b8e83;font-weight:600">v0.1.161</span></div><div class="projectNow" id="projectNow">現場：—</div></div><div class="line tools"><button onclick="openProjects()">現場一覧</button><button onclick="newProject()">＋新規現場</button><select id="client"></select><button onclick="openClientManager()">取引先管理</button><button onclick="openRecipientManager()">宛名管理</button><button onclick="openCompany()">自社情報・印鑑</button><button onclick="showHidden()">非表示項目</button><button onclick="restoreBackup()" title="直前の保存データへ戻す">データ復元</button><button onclick="openFullBackup()" title="全データをファイルへ保存・復元">バックアップ</button><button class="primary" id="pdfBtn" onclick="exportPDF()">PDF出力</button></div></div>
+</head><body><div id="pdfBusy">PDFを作成中…</div><div class="top"><div class="line"><div class="brand">ARTY WORKS <span style="font-size:10px;color:#9b8e83;font-weight:600">v0.1.162</span></div><div class="projectNow" id="projectNow">現場：—</div></div><div class="line tools"><button onclick="openProjects()">現場一覧</button><button onclick="newProject()">＋新規現場</button><select id="client"></select><button onclick="openClientManager()">取引先管理</button><button onclick="openRecipientManager()">宛名管理</button><button onclick="openCompany()">自社情報・印鑑</button><button onclick="showHidden()">非表示項目</button><button onclick="restoreBackup()" title="直前の保存データへ戻す">データ復元</button><button onclick="openFullBackup()" title="全データをファイルへ保存・復元">バックアップ</button><button class="primary" id="pdfBtn" onclick="exportPDF()">PDF出力</button></div></div>
 <div class="layout">
 <div class="card previewCard"><div class="head previewHeadV131"><span>出力プレビュー <span class="small">1ページ目のみ配置調整可・2ページ目以降はPDF固定表示</span></span><div class="coverHeadActions"><button type="button" id="coverDefaultBtn" onclick="saveCoverLayoutAsDefault()">この配置をデフォルト保存</button><button type="button" id="coverLayoutLockBtn" onclick="toggleCoverLayoutLock()">配置固定</button></div></div><div class="preview"><div class="paper previewCoverOnly" id="paper"></div><div id="detailPreviewPages" class="detailPreviewPages"></div></div></div>
 <div class="card inputCard"><div class="head">書類入力 <span class="small">基本は数量だけ入力・ここでの変更はこの書類だけ</span></div><div class="inputScroll"><div class="meta docMetaV128">
@@ -323,7 +323,7 @@ body{overscroll-behavior:none}
 <button data-key="4">4</button><button data-key="5">5</button><button data-key="6">6</button>
 <button data-key="7">7</button><button data-key="8">8</button><button data-key="9">9</button>
 <button data-key=".">.</button><button data-key="0">0</button><button data-key="back">⌫</button>
-<button data-key="next" class="next">次へ</button></div></div>
+<button data-key="sign" class="priceSignKey" title="単価の＋/－を切替">±</button><button data-key="next" class="next">次へ</button></div></div>
 <datalist id="unitMasterDatalist"></datalist>
 <div class="modal" id="pdfReadyModal">
   <div class="mc pdfReadyBox">
@@ -359,7 +359,7 @@ body{overscroll-behavior:none}
     <label>品名<input id="inlineName"></label>
     <label>仕様<input id="inlineSpec" placeholder="任意"></label>
     <label>単位<div class="inlineUnitWrap"><input id="inlineUnit" list="unitMasterDatalist"><button type="button" onclick="openUnitMaster()">単位マスター</button></div></label>
-    <label>単価<input id="inlinePrice" type="number" inputmode="decimal"></label><label>税区分<select id="inlineTax"><option value="taxable">課税</option><option value="nontaxable">非課税</option></select></label><label>【】文字色<div class="inlineBracketColorWrap"><select id="inlineBracketColor" onchange="syncInlineBracketColorSample()"><option value="black">黒</option><option value="red">赤</option><option value="blue">青</option></select><span id="inlineBracketColorSample">【概算】</span></div><span class="small bracketColorHelp">品名の【〇〇】部分だけ色が変わります</span></label>
+    <label>単価<div class="inlinePriceWrap"><input id="inlinePrice" type="number" inputmode="decimal"><button type="button" class="inlinePriceSignBtn" onclick="toggleInlinePriceSign()" title="＋/－を切替">±</button></div></label><label>税区分<select id="inlineTax"><option value="taxable">課税</option><option value="nontaxable">非課税</option></select></label><label>【】文字色<div class="inlineBracketColorWrap"><select id="inlineBracketColor" onchange="syncInlineBracketColorSample()"><option value="black">黒</option><option value="red">赤</option><option value="blue">青</option></select><span id="inlineBracketColorSample">【概算】</span></div><span class="small bracketColorHelp">品名の【〇〇】部分だけ色が変わります</span></label>
   </div>
   <div id="inlineSection" class="small" style="margin-top:8px"></div>
   <div class="ma" style="justify-content:space-between">
@@ -2983,6 +2983,7 @@ function openInlineMovePosition(){
     };
   }
 }
+function toggleInlinePriceSign(){const el=document.getElementById('inlinePrice');if(!el)return;const n=Number(el.value);if(!Number.isFinite(n))return;el.value=String(n===0?0:-n);try{el.focus()}catch(_){}}
 function closeInlineEdit(){inlineEditModal.classList.remove('on');inlineSel=null}
 function saveInlineEdit(){
   if(!inlineSel)return;
@@ -3425,8 +3426,8 @@ const numPad=document.getElementById('numPad');
 const padCurrent=document.getElementById('padCurrent');
 function fieldKind(el){return (el.dataset.p!==undefined||el.dataset.customPriceSi!==undefined)?'price':'qty'}
 function closePadIfOpen(){const a=document.activeElement;if(a&&a.blur)try{a.blur()}catch(_){}const p=document.getElementById('numPad');if(p){p.classList.remove('on');p.style.display='none';setTimeout(()=>{p.style.display=''},60)}}
-function openPad(el){document.querySelectorAll('.activeQty').forEach(x=>x.classList.remove('activeQty'));document.querySelectorAll('.activeRow').forEach(x=>x.classList.remove('activeRow'));activeQty=el;el.classList.add('activeQty');const row=el.closest('.row');if(row)row.classList.add('activeRow');let name='';if(row){const nf=row.querySelector('.itemName');name=(nf?.value||nf?.textContent||'').trim()}padCurrent.textContent='入力中：'+(name||'自由項目');numPad.classList.add('on')}
-function commitNum(){if(!activeQty)return;const v=activeQty.value;if(activeQty.dataset.q!==undefined){s.qty[activeQty.dataset.q]=v}else if(activeQty.dataset.p!==undefined){setEstimatePrice(activeQty.dataset.p,Number(v)||0,Number(activeQty.dataset.base)||0)}else if(activeQty.dataset.customSi!==undefined){
+function openPad(el){document.querySelectorAll('.activeQty').forEach(x=>x.classList.remove('activeQty'));document.querySelectorAll('.activeRow').forEach(x=>x.classList.remove('activeRow'));activeQty=el;el.classList.add('activeQty');const row=el.closest('.row');if(row)row.classList.add('activeRow');let name='';if(row){const nf=row.querySelector('.itemName');name=(nf?.value||nf?.textContent||'').trim()}const isPrice=fieldKind(el)==='price';numPad.classList.toggle('priceMode',isPrice);padCurrent.textContent='入力中：'+(name||'自由項目')+(isPrice?'（単価 ±可）':'');numPad.classList.add('on')}
+function commitNum(){if(!activeQty)return;const v=activeQty.value;if(v==='-'||v==='.'||v==='-.')return;if(activeQty.dataset.q!==undefined){s.qty[activeQty.dataset.q]=v}else if(activeQty.dataset.p!==undefined){setEstimatePrice(activeQty.dataset.p,Number(v)||0,Number(activeQty.dataset.base)||0)}else if(activeQty.dataset.customSi!==undefined){
   const si=Number(activeQty.dataset.customSi),ci=Number(activeQty.dataset.customCi),b=customBucket(si);
   if(b[ci])b[ci].qty=v;
 }else if(activeQty.dataset.customPriceSi!==undefined){
@@ -3434,7 +3435,7 @@ function commitNum(){if(!activeQty)return;const v=activeQty.value;if(activeQty.d
   if(b[ci])b[ci].price=Number(v)||0;
 }save();renderPreview();updateAmounts()}
 function nextNum(){if(!activeQty)return;const kind=fieldKind(activeQty);const sel=kind==='price'?'.p':'.q';const a=[...document.querySelectorAll(sel)].filter(x=>x.offsetParent!==null);const i=a.indexOf(activeQty);if(i>=0&&i<a.length-1){openPad(a[i+1]);a[i+1].scrollIntoView({block:'center',behavior:'smooth'})}}
-numPad.querySelectorAll('button[data-key]').forEach(b=>{b.addEventListener('pointerdown',e=>{e.preventDefault();if(!activeQty)return;const k=b.dataset.key;if(k==='back')activeQty.value=activeQty.value.slice(0,-1);else if(k==='next'){nextNum();return}else if(k==='.'&&activeQty.value.includes('.'))return;else activeQty.value+=k;commitNum()})});
+numPad.querySelectorAll('button[data-key]').forEach(b=>{b.addEventListener('pointerdown',e=>{e.preventDefault();if(!activeQty)return;const k=b.dataset.key;if(k==='back')activeQty.value=activeQty.value.slice(0,-1);else if(k==='next'){nextNum();return}else if(k==='sign'){if(fieldKind(activeQty)!=='price')return;activeQty.value=activeQty.value.startsWith('-')?activeQty.value.slice(1):('-'+activeQty.value);commitNum();return}else if(k==='.'&&activeQty.value.includes('.'))return;else activeQty.value+=k;commitNum()})});
 (function(){
   const d=document.getElementById('numPadDrag');
   let sx=0,sy=0,sl=0,st=0,on=false;
@@ -7902,4 +7903,14 @@ body .docTypeChooser .docTypeFixedWrap{display:flex!important;}
 .pdfPageInner .bracketAccent.bracket-red{color:#c62828!important}
 .pdfPageInner .bracketAccent.bracket-blue{color:#1565c0!important}
 @media(max-width:760px){#inlineEditModal .editGrid{grid-template-columns:1fr 1fr!important}#inlineEditModal .editGrid>label:nth-child(1),#inlineEditModal .editGrid>label:nth-child(2){grid-column:1/-1!important}}
+</style>
+
+<style id="v0162-negative-price">
+/* v0.1.162: 見積・請求の書類内単価でマイナス入力を許可（端数調整・値引き等） */
+#numPad .priceSignKey{display:none!important}
+#numPad:not(.priceMode) .next{grid-column:1/-1!important}
+#numPad.priceMode .priceSignKey{display:block!important;grid-column:1/2!important;background:#8a5f5f!important}
+#numPad.priceMode .next{grid-column:2/-1!important}
+.inlinePriceWrap{display:grid!important;grid-template-columns:minmax(0,1fr) 46px!important;gap:6px!important;align-items:center!important}
+.inlinePriceSignBtn{height:42px!important;border:1px solid var(--line)!important;border-radius:9px!important;background:#fff!important;font-weight:900!important;font-size:18px!important;color:var(--dark)!important}
 </style>
