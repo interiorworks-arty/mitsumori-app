@@ -255,7 +255,7 @@ body{overscroll-behavior:none}
 }
 </style>
 
-</head><body><div id="pdfBusy">PDFを作成中…</div><div class="top"><div class="line"><div class="brand">ARTY WORKS <span style="font-size:10px;color:#9b8e83;font-weight:600">v0.1.163</span></div><div class="projectNow" id="projectNow">現場：—</div></div><div class="line tools"><button onclick="openProjects()">現場一覧</button><button onclick="newProject()">＋新規現場</button><select id="client"></select><button onclick="openClientManager()">取引先管理</button><button onclick="openRecipientManager()">宛名管理</button><button onclick="openCompany()">自社情報・印鑑</button><button onclick="showHidden()">非表示項目</button><button onclick="restoreBackup()" title="直前の保存データへ戻す">データ復元</button><button onclick="openFullBackup()" title="全データをファイルへ保存・復元">バックアップ</button><button class="primary" id="pdfBtn" onclick="exportPDF()">PDF出力</button></div></div>
+</head><body><div id="pdfBusy">PDFを作成中…</div><div class="top"><div class="line"><div class="brand">ARTY WORKS <span style="font-size:10px;color:#9b8e83;font-weight:600">v0.1.164</span></div><div class="projectNow" id="projectNow">現場：—</div></div><div class="line tools"><button onclick="openProjects()">現場一覧</button><button onclick="newProject()">＋新規現場</button><select id="client"></select><button onclick="openClientManager()">取引先管理</button><button onclick="openRecipientManager()">宛名管理</button><button onclick="openCompany()">自社情報・印鑑</button><button onclick="showHidden()">非表示項目</button><button onclick="restoreBackup()" title="直前の保存データへ戻す">データ復元</button><button onclick="openFullBackup()" title="全データをファイルへ保存・復元">バックアップ</button><button class="primary" id="pdfBtn" onclick="exportPDF()">PDF出力</button></div></div>
 <div class="layout">
 <div class="card previewCard"><div class="head previewHeadV131"><span>出力プレビュー <span class="small">1ページ目のみ配置調整可・2ページ目以降はPDF固定表示</span></span><div class="coverHeadActions"><button type="button" id="coverDefaultBtn" onclick="saveCoverLayoutAsDefault()">この配置をデフォルト保存</button><button type="button" id="coverLayoutLockBtn" onclick="toggleCoverLayoutLock()">配置固定</button></div></div><div class="preview"><div class="paper previewCoverOnly" id="paper"></div><div id="detailPreviewPages" class="detailPreviewPages"></div></div></div>
 <div class="card inputCard"><div class="head">書類入力 <span class="small">基本は数量だけ入力・ここでの変更はこの書類だけ</span></div><div class="inputScroll"><div class="meta docMetaV128">
@@ -7925,18 +7925,21 @@ body .docTypeChooser .docTypeFixedWrap{display:flex!important;}
 .inlinePriceSignBtn{height:42px!important;border:1px solid var(--line)!important;border-radius:9px!important;background:#fff!important;font-weight:900!important;font-size:18px!important;color:var(--dark)!important}
 </style>
 
-<style id="v0163-output-space-row">
-/* v0.1.163: 入力画面の「＋空白」をプレビュー/PDFにも1行分反映 */
+<style id="v0164-output-space-row">
+/* v0.1.164: 空白行を「次項目の上余白」に見せず、独立した空白1行として表示 */
 #paper .estimateTable .previewSpaceRow td,
 .pdfPageInner .estimateTable .previewSpaceRow td{
-  height:8mm!important;
-  min-height:8mm!important;
+  height:5mm!important;
+  min-height:5mm!important;
   padding:0!important;
-  border-bottom:0!important;
-  background:transparent!important;
+  border-top:1px solid #ddd!important;
+  border-bottom:1px solid #ddd!important;
+  background:#fff!important;
+  line-height:0!important;
+  font-size:0!important;
 }
 #paper .estimateTable .previewSpaceRow,
 .pdfPageInner .estimateTable .previewSpaceRow{
-  height:8mm!important;
+  height:5mm!important;
 }
 </style>
