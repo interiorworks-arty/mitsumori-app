@@ -255,7 +255,7 @@ body{overscroll-behavior:none}
 }
 </style>
 
-</head><body><div id="pdfBusy">PDFを作成中…</div><div class="top"><div class="line"><div class="brand">ARTY WORKS <span style="font-size:10px;color:#9b8e83;font-weight:600">v0.1.165</span></div><div class="projectNow" id="projectNow">現場：—</div></div><div class="line tools"><button onclick="openProjects()">現場一覧</button><button onclick="newProject()">＋新規現場</button><select id="client"></select><button onclick="openClientManager()">取引先管理</button><button onclick="openRecipientManager()">宛名管理</button><button onclick="openCompany()">自社情報・印鑑</button><button onclick="showHidden()">非表示項目</button><button onclick="restoreBackup()" title="直前の保存データへ戻す">データ復元</button><button onclick="openFullBackup()" title="全データをファイルへ保存・復元">バックアップ</button><button class="primary" id="pdfBtn" onclick="exportPDF()">PDF出力</button></div></div>
+</head><body><div id="pdfBusy">PDFを作成中…</div><div class="top"><div class="line"><div class="brand">ARTY WORKS <span style="font-size:10px;color:#9b8e83;font-weight:600">v0.1.166</span></div><div class="projectNow" id="projectNow">現場：—</div></div><div class="line tools"><button onclick="openProjects()">現場一覧</button><button onclick="newProject()">＋新規現場</button><select id="client"></select><button onclick="openClientManager()">取引先管理</button><button onclick="openRecipientManager()">宛名管理</button><button onclick="openCompany()">自社情報・印鑑</button><button onclick="showHidden()">非表示項目</button><button onclick="restoreBackup()" title="直前の保存データへ戻す">データ復元</button><button onclick="openFullBackup()" title="全データをファイルへ保存・復元">バックアップ</button><button class="primary" id="pdfBtn" onclick="exportPDF()">PDF出力</button></div></div>
 <div class="layout">
 <div class="card previewCard"><div class="head previewHeadV131"><span>出力プレビュー <span class="small">1ページ目のみ配置調整可・2ページ目以降はPDF固定表示</span></span><div class="coverHeadActions"><button type="button" id="coverDefaultBtn" onclick="saveCoverLayoutAsDefault()">この配置をデフォルト保存</button><button type="button" id="coverLayoutLockBtn" onclick="toggleCoverLayoutLock()">配置固定</button></div></div><div class="preview"><div class="paper previewCoverOnly" id="paper"></div><div id="detailPreviewPages" class="detailPreviewPages"></div></div></div>
 <div class="card inputCard"><div class="head">書類入力 <span class="small">基本は数量だけ入力・ここでの変更はこの書類だけ</span></div><div class="inputScroll"><div class="meta docMetaV128">
@@ -727,7 +727,18 @@ function duplicateProject(id){
 function deleteProject(id){
   const pr=projects.find(p=>p.id===id);if(!pr)return;
   if(projects.length<=1){alert('最後の1件は削除できません。新規現場を作ってから削除してください。');return}
-  if(!confirm(`「${projectLabel(pr)}」を削除しますか？\nこの現場の見積内容は削除されます。`))return;
+  const type=(pr.data&&pr.data.meta&&pr.data.meta.docType)||'estimate';
+  const label=projectLabel(pr);
+  let msg='';
+  if(type==='invoice'){
+    msg=`「${label}」の請求書を削除しますか？\nこの請求書だけ削除されます。\n元の見積書は削除されません。`;
+  }else if(type==='request'){
+    msg=`「${label}」の依頼書を削除しますか？\nこの依頼書だけ削除されます。`;
+  }else{
+    msg=`「${label}」の見積書を削除しますか？\nこの見積書だけ削除されます。\nこの見積から作成済みの請求書は削除されません。`;
+  }
+  if(!confirm(msg))return;
+  // 書類は1件ずつ独立した project として保持。指定ID以外には触れない。
   projects=projects.filter(p=>p.id!==id);localStorage.setItem(PROJECTS_K,JSON.stringify(projects));
   if(activeProjectId===id){
     activeProjectId=projects[0].id;localStorage.setItem(ACTIVE_PROJECT_K,activeProjectId);loadProjectState(projects[0]);localStorage.setItem(K,JSON.stringify(s));render();
@@ -7655,7 +7666,7 @@ html.pdfBusyNow,html.pdfBusyNow body{overflow:hidden!important}
     data.meta.notes=data.meta.notesByDocType.invoice||'';
     const id='p'+Date.now()+Math.random().toString(36).slice(2,5);
     const baseName=(data.meta.project||src.name||'請求書').trim()||'請求書';
-    const pr={id,name:baseName+'（請求書）',createdAt:Date.now(),updatedAt:Date.now(),data};
+    const pr={id,name:baseName+'（請求書）',createdAt:Date.now(),updatedAt:Date.now(),sourceEstimateId:src.id,data};
     projects.push(pr);
     localStorage.setItem(PROJECTS_K,JSON.stringify(projects));
     activeProjectId=id;
@@ -7943,3 +7954,5 @@ body .docTypeChooser .docTypeFixedWrap{display:flex!important;}
   height:5mm!important;
 }
 </style>
+
+<!-- v0.1.166: 見積・請求の削除を完全分離。請求書削除時は元見積を残す旨を明示。 -->
