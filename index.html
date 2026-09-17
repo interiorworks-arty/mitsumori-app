@@ -7076,7 +7076,7 @@ html.pdfBusyNow,html.pdfBusyNow body{overflow:hidden!important}
 #stdNewProductModal .v145NewProductContext{font-weight:900;color:#5f554d;margin:0 0 10px}
 </style>
 <script id="v0145-client-section-add-product-js">
-/* v0.1.168: 取引先設定の「この区分に新規商品登録」が押せない不具合を修正（スコープ外関数参照を排除） */
+/* v0.1.169: 取引先設定の新規商品登録で、登録ボタン押下後に処理が止まる不具合を修正 */
 (function(){
   let newProductCtx=null;
 
@@ -7135,11 +7135,17 @@ html.pdfBusyNow,html.pdfBusyNow body{overflow:hidden!important}
     const price=Math.max(0,Number(document.getElementById('stdNewProductPrice')?.value)||0);
     const tax=document.getElementById('stdNewProductTax')?.value==='nontaxable'?'nontaxable':'taxable';
 
-    // ARTY標準は絶対ルールどおり毎回反映範囲を確認。
+    // ARTY標準だけは登録時に反映範囲を確認。
+    // 旧版では別IIFE内の financialScopeChoice / scopeChoice を参照していたため、
+    // このスコープから見えず登録処理が止まっていた。ここで完結させる。
     let scope='client';
     if(c.id==='std'){
-      scope=(typeof financialScopeChoice==='function'?financialScopeChoice('新規商品登録'):(typeof scopeChoice==='function'?scopeChoice('新規商品登録'):null));
-      if(!scope)return;
+      const ans=prompt('新規商品登録の反映範囲を選んでください。\n\n1：ARTY標準だけ\n2：全取引先にも追加\n\n1 または 2 を入力してください。','1');
+      if(ans===null)return;
+      const v=String(ans).trim();
+      if(v==='1')scope='std';
+      else if(v==='2')scope='all';
+      else{alert('1 または 2 を入力してください');return;}
     }
 
     s.userMaster=s.userMaster||{};if(!Array.isArray(s.userMaster[si]))s.userMaster[si]=[];
