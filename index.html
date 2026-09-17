@@ -255,7 +255,7 @@ body{overscroll-behavior:none}
 }
 </style>
 
-</head><body><div id="pdfBusy">PDFを作成中…</div><div class="top"><div class="line"><div class="brand">ARTY WORKS <span style="font-size:10px;color:#9b8e83;font-weight:600">v0.1.167</span></div><div class="projectNow" id="projectNow">現場：—</div></div><div class="line tools"><button onclick="openProjects()">現場一覧</button><button onclick="newProject()">＋新規現場</button><select id="client"></select><button onclick="openClientManager()">取引先管理</button><button onclick="openRecipientManager()">宛名管理</button><button onclick="openCompany()">自社情報・印鑑</button><button onclick="showHidden()">非表示項目</button><button onclick="restoreBackup()" title="直前の保存データへ戻す">データ復元</button><button onclick="openFullBackup()" title="全データをファイルへ保存・復元">バックアップ</button><button class="primary" id="pdfBtn" onclick="exportPDF()">PDF出力</button></div></div>
+</head><body><div id="pdfBusy">PDFを作成中…</div><div class="top"><div class="line"><div class="brand">ARTY WORKS <span style="font-size:10px;color:#9b8e83;font-weight:600">v0.1.168</span></div><div class="projectNow" id="projectNow">現場：—</div></div><div class="line tools"><button onclick="openProjects()">現場一覧</button><button onclick="newProject()">＋新規現場</button><select id="client"></select><button onclick="openClientManager()">取引先管理</button><button onclick="openRecipientManager()">宛名管理</button><button onclick="openCompany()">自社情報・印鑑</button><button onclick="showHidden()">非表示項目</button><button onclick="restoreBackup()" title="直前の保存データへ戻す">データ復元</button><button onclick="openFullBackup()" title="全データをファイルへ保存・復元">バックアップ</button><button class="primary" id="pdfBtn" onclick="exportPDF()">PDF出力</button></div></div>
 <div class="layout">
 <div class="card previewCard"><div class="head previewHeadV131"><span>出力プレビュー <span class="small">1ページ目のみ配置調整可・2ページ目以降はPDF固定表示</span></span><div class="coverHeadActions"><button type="button" id="coverDefaultBtn" onclick="saveCoverLayoutAsDefault()">この配置をデフォルト保存</button><button type="button" id="coverLayoutLockBtn" onclick="toggleCoverLayoutLock()">配置固定</button></div></div><div class="preview"><div class="paper previewCoverOnly" id="paper"></div><div id="detailPreviewPages" class="detailPreviewPages"></div></div></div>
 <div class="card inputCard"><div class="head">書類入力 <span class="small">基本は数量だけ入力・ここでの変更はこの書類だけ</span></div><div class="inputScroll"><div class="meta docMetaV128">
@@ -7076,6 +7076,7 @@ html.pdfBusyNow,html.pdfBusyNow body{overflow:hidden!important}
 #stdNewProductModal .v145NewProductContext{font-weight:900;color:#5f554d;margin:0 0 10px}
 </style>
 <script id="v0145-client-section-add-product-js">
+/* v0.1.168: 取引先設定の「この区分に新規商品登録」が押せない不具合を修正（スコープ外関数参照を排除） */
 (function(){
   let newProductCtx=null;
 
@@ -7083,7 +7084,9 @@ html.pdfBusyNow,html.pdfBusyNow body{overflow:hidden!important}
   function visibleClientList(){return (s.clients||[]).filter(x=>x.id!=='free')}
 
   window.openClientSectionNewProduct=function(si){
-    closeCustomPad?.();
+    try{if(typeof window.closePadIfOpen==='function')window.closePadIfOpen()}catch(_){}
+    try{activeQty=null}catch(_){}
+    document.querySelectorAll('.activeQty,.activeRow').forEach(x=>x.classList.remove('activeQty','activeRow'));
     const c=settingsClient();
     if(!c||!MASTER[si])return;
     const modal=document.getElementById('stdNewProductModal');
